@@ -220,13 +220,13 @@ export default function App() {
                 <svg width="19" height="19" fill="none" stroke="#2ea9b6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></svg>
               </span>
             }
-            <span>Paste clipboard</span>
+            <span class="">Paste clipboard</span>
           </button>
           <label htmlFor="upload-image" className="upload-btn">
             <span className="btn-icon">
               <svg width="19" height="19" fill="none" stroke="#2ea9b6" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
             </span>
-            <span>Upload image</span>
+            <span class="btn-title">Upload image</span>
             <input id="upload-image" type="file" accept="image/*" onChange={handleImage} style={{ display: "none" }} />
           </label>
         </div>
@@ -551,11 +551,18 @@ export default function App() {
           justify-content: center;
           min-width: 21px;
         }
+        .clipboard-btn {
+          height:39px!important;
+        }
+        .btn-title {
+        font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
+        }
         @media (max-width: 700px) {
           .center-container {
             max-width: 100vw;
             min-width: 0;
             padding: 0 20px;
+            min-height: auto;
           }
           .export-canvas { width: ${EXPORT_CANVAS_SIZE_MOBILE}px !important; height: ${EXPORT_CANVAS_SIZE_MOBILE}px !important; max-width: 99vw; max-height: 99vw;}
           .ratio-slider { width: 96vw; max-width: 270px;}
