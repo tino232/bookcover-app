@@ -204,13 +204,13 @@ export default function App() {
             }
             <span>Paste clipboard</span>
           </button>
-          <label htmlFor="upload-image" className="upload-btn">
+          <button htmlFor="upload-image" className="upload-btn">
             <span className="btn-icon">
               <svg width="19" height="19" fill="none" stroke="#2ea9b6" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
             </span>
             <span>Upload image</span>
             <input id="upload-image" type="file" accept="image/*" onChange={handleImage} style={{ display: "none" }} />
-          </label>
+          </button>
         </div>
         <div className="filename-area">
           {imgFileName && imgFileName !== "clipboard-image.png" && (
@@ -514,6 +514,12 @@ export default function App() {
           font-size: 13px;
           color: #b6bbc1;
           text-align: center;
+        }
+        .btn-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 21px;
         }
         @media (max-width: 700px) {
           .center-container {
