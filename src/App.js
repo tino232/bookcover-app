@@ -31,23 +31,22 @@ export default function App() {
   const [copyMsg, setCopyMsg] = useState("");
   const [pasteLoading, setPasteLoading] = useState(false);
   const imgRef = useRef();
-  const containerRef = useRef();
   const [imageAreaHeight, setImageAreaHeight] = useState(320);
 
-  // Dynamic height adjustment to keep body 100vh, no scroll
+  // Dynamic height adjustment to keep body + header = 100vh
   useEffect(() => {
     function adjustHeight() {
-      if (!containerRef.current) return;
       const headerH = 62;
-      const footerH = 60;
-      const padding = 30;
-      const actionsH = 50;
+      const bodyH = window.innerHeight - headerH;
+      const actionsH = 48;
       const fileH = imgFileName ? 23 : 0;
-      const ratioH = 46;
-      const exportH = 44;
+      const ratioH = 54;
+      const exportH = 54;
       const msgH = copyMsg ? 22 : 0;
-      const remain = window.innerHeight - (headerH + footerH + padding + actionsH + fileH + ratioH + exportH + msgH);
-      setImageAreaHeight(Math.max(220, remain));
+      const disclaimerH = 34;
+      const marginSum = 32 + 28 + 34 + 12; // margins/paddings, tweak if needed
+      let remain = bodyH - (actionsH + fileH + ratioH + exportH + msgH + disclaimerH + marginSum);
+      setImageAreaHeight(Math.max(180, remain));
     }
     adjustHeight();
     window.addEventListener("resize", adjustHeight);
@@ -129,13 +128,13 @@ export default function App() {
       ctx.drawImage(img, x, y, coverW, coverH);
       ctx.restore();
       ctx.save();
-      const fontSize = Math.round(h * 0.045);
+      const fontSize = Math.round(h * 0.045 * 0.8); // 20% smaller
       ctx.font = `bold ${fontSize}px Inter, Arial, sans-serif`;
       ctx.textBaseline = "top";
       ctx.textAlign = "right";
-      ctx.globalAlpha = 0.82;
+      ctx.globalAlpha = 0.8;
       ctx.fillStyle = "#fff";
-      const markY = y + coverH + fontSize * 0.22;
+      const markY = y + coverH + 4;
       ctx.fillText("@tinoreading", x + coverW, markY);
       ctx.restore();
     }
@@ -164,6 +163,10 @@ export default function App() {
     }
   };
 
+  // Compound ratio button logic
+  const sliderWidth = 260;
+  const highlightW = Math.floor(sliderWidth / 3) - 6;
+
   return (
     <div>
       {/* HEADER */}
@@ -181,9 +184,8 @@ export default function App() {
           </a>
         </div>
       </header>
-
       {/* MAIN CONTENT */}
-      <div className="center-container" ref={containerRef}>
+      <div className="center-container">
         {/* 1. Upload & Paste */}
         <div className="actions-row">
           <button
@@ -207,11 +209,10 @@ export default function App() {
             <input id="upload-image" type="file" accept="image/*" onChange={handleImage} style={{ display: "none" }} />
           </label>
         </div>
-        {/* Filename (fixed height, fade-in) */}
+        {/* Filename */}
         <div className="filename-area">
           {imgFileName && <span className="filename-text">{imgFileName}</span>}
         </div>
-
         {/* 2. Rendered Image */}
         <div
           className="result-panel"
@@ -244,9 +245,8 @@ export default function App() {
             />
           </div>
         </div>
-
         {/* 3. Ratio compound button */}
-        <div className="ratio-slider">
+        <div className="ratio-slider" style={{ width: sliderWidth }}>
           {RATIOS.map((ratio, idx) => (
             <button
               key={ratio.key}
@@ -263,12 +263,12 @@ export default function App() {
           <div
             className="slider-highlight"
             style={{
-              left: `calc(${selectedIdx * 33.3333}% + 2px)`,
+              left: `calc(${selectedIdx * 33.3333}% + 3px)`,
+              width: highlightW,
               transition: "left 0.32s cubic-bezier(.7,.4,0,1)"
             }}
           />
         </div>
-
         {/* 4. Export buttons */}
         <div className="export-actions">
           <button
@@ -286,7 +286,6 @@ export default function App() {
             </a>
           }
         </div>
-        {/* Copy message */}
         <div className="copy-msg">
           {copyMsg}
         </div>
@@ -295,7 +294,6 @@ export default function App() {
           This web app processes all images on your device. No image data is uploaded or saved.
         </div>
       </div>
-
       <style>{`
         html, body {
           background: #fff;
@@ -310,6 +308,7 @@ export default function App() {
           justify-content: space-between;
           height: 62px;
           padding: 0 46px 0 36px;
+          min-width: 0;
         }
         .brand { font-weight: 700; font-size: 20px; letter-spacing: 0.6px; }
         .header-actions { display: flex; align-items: center; gap: 20px; }
@@ -334,21 +333,24 @@ export default function App() {
           width: 100%;
           max-width: 650px;
           min-height: calc(100vh - 62px);
+          box-sizing: border-box;
+          padding-left: 0;
+          padding-right: 0;
         }
         .actions-row {
           display: flex;
           gap: 16px;
-          margin-top: 36px;
+          margin-top: 32px;
           margin-bottom: 0;
           width: 100%;
           justify-content: center;
         }
         .clipboard-btn, .upload-btn {
-          width: 175px;
+          width: 170px;
           height: 36px;
           border-radius: 13px;
           font-weight: 500;
-          font-size: 14px;
+          font-size: 13px;
           margin: 0;
           display: flex;
           align-items: center;
@@ -375,7 +377,7 @@ export default function App() {
           display: flex;
           flex-direction: column;
           align-items: center;
-          margin-top: 18px;
+          margin-top: 16px;
           margin-bottom: 0;
         }
         .export-canvas {
@@ -388,6 +390,7 @@ export default function App() {
           justify-content: center;
           position: relative;
           box-shadow: 0 1.5px 12px #54cfe915;
+          border-radius: 0 !important;
         }
         .sharp-corner { border-radius: 0 !important; }
         .canvas-img {
@@ -405,7 +408,7 @@ export default function App() {
         }
         .ratio-slider {
           position: relative;
-          margin-top: 30px;
+          margin-top: 28px;
           width: 260px;
           height: 42px;
           background: #f2fafd;
@@ -422,7 +425,7 @@ export default function App() {
           outline: none;
           color: #38b9c2;
           font-weight: 700;
-          font-size: 15px;
+          font-size: 14px;
           padding: 8px 0;
           z-index: 2;
           cursor: pointer;
@@ -435,7 +438,6 @@ export default function App() {
         .slider-highlight {
           position: absolute;
           top: 3px;
-          width: calc(33.33% - 4px);
           height: 36px;
           border-radius: 14px;
           background: ${BRAND_COLOR};
@@ -444,7 +446,7 @@ export default function App() {
           transition: left 0.38s cubic-bezier(.77,.22,.31,1.08), background 0.19s;
         }
         .export-actions {
-          margin-top: 22px;
+          margin-top: 18px;
           display: flex;
           justify-content: center;
           width: 100%;
@@ -495,15 +497,15 @@ export default function App() {
         }
         @media (max-width: 700px) {
           .center-container {
-            max-width: 99vw;
+            max-width: 100vw;
             min-width: 0;
-            padding: 0 2vw;
+            padding: 0 20px;
           }
-          .export-canvas { width: 90vw; height: 90vw; max-width: 340px; max-height: 340px;}
+          .export-canvas { width: 94vw; height: 94vw; max-width: 340px; max-height: 340px;}
           .ratio-slider { width: 96vw; max-width: 270px;}
+          .header-bar { padding: 0 5vw 0 4vw; }
         }
-      `}
-      </style>
+      `}</style>
     </div>
   );
 }
