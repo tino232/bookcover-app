@@ -94,7 +94,6 @@ function App() {
     const img = imgRef.current;
     if (img) {
       const aspect = img.naturalWidth / img.naturalHeight;
-      // Book cover width rule per ratio:
       let coverW;
       if (key === "9:16") {
         coverW = w * 0.5;
@@ -102,13 +101,11 @@ function App() {
         coverW = w / 3;
       }
       let coverH = coverW / aspect;
-      // If height exceeds 90% canvas, scale down
       if (coverH > h * 0.9) {
         coverH = h * 0.9;
         coverW = coverH * aspect;
       }
       const x = (w - coverW) / 2;
-      // Place cover at vertical center minus some offset (to fit watermark)
       const y = (h - coverH) / 2 - 0.04 * h;
       ctx.save();
       ctx.shadowColor = "rgba(55,186,194,0.08)";
@@ -173,112 +170,108 @@ function App() {
         </div>
       </header>
 
-      <div className="main-layout">
-        {/* LEFT COLUMN */}
-        <section className="column left-column">
-          <div className="upload-panel">
-            <button
-              className="clipboard-btn"
-              onClick={handlePasteClipboard}
-              disabled={pasteLoading}
-            >
-              {pasteLoading ?
-                <span className="btn-spinner">⏳</span> :
-                <span className="btn-icon">
-                  <svg width="21" height="21" fill="none" stroke="#2ea9b6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></svg>
-                </span>
-              }
-              <span>Paste from clipboard</span>
-            </button>
-            <label htmlFor="upload-image" className="upload-btn">
+      {/* MAIN CONTENT */}
+      <div className="center-container">
+        {/* 1. Upload & Paste */}
+        <div className="actions-row">
+          <button
+            className="clipboard-btn"
+            onClick={handlePasteClipboard}
+            disabled={pasteLoading}
+          >
+            {pasteLoading ?
+              <span className="btn-spinner">⏳</span> :
               <span className="btn-icon">
-                <svg width="22" height="22" fill="none" stroke="#2ea9b6" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                <svg width="19" height="19" fill="none" stroke="#2ea9b6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></svg>
               </span>
-              <span>Upload image</span>
-              <input id="upload-image" type="file" accept="image/*" onChange={handleImage} style={{ display: "none" }} />
-            </label>
-            {/* Filename under upload */}
-            {imgFileName &&
-              <div className="filename-text">{imgFileName}</div>
             }
-          </div>
-        </section>
+            <span>Paste from clipboard</span>
+          </button>
+          <label htmlFor="upload-image" className="upload-btn">
+            <span className="btn-icon">
+              <svg width="19" height="19" fill="none" stroke="#2ea9b6" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+            </span>
+            <span>Upload image</span>
+            <input id="upload-image" type="file" accept="image/*" onChange={handleImage} style={{ display: "none" }} />
+          </label>
+        </div>
+        {imgFileName &&
+          <div className="filename-text">{imgFileName}</div>
+        }
 
-        {/* RIGHT COLUMN */}
-        <section className="column right-column">
-          <div className="result-panel">
-            {/* Export preview area */}
-            <div className="export-canvas">
-              {canvasUrl ?
-                <img
-                  src={canvasUrl}
-                  alt="result"
-                  className="canvas-img"
-                  crossOrigin="anonymous"
-                /> :
-                <span className="preview-placeholder">
-                  Export preview
-                </span>
-              }
-              {/* The hidden img for rendering */}
+        {/* 2. Rendered Image */}
+        <div className="result-panel">
+          <div className="export-canvas sharp-corner">
+            {canvasUrl ?
               <img
-                ref={imgRef}
-                src={imgUrl}
-                alt=""
-                className="hidden-img"
+                src={canvasUrl}
+                alt="result"
+                className="canvas-img"
                 crossOrigin="anonymous"
-                onLoad={renderCanvas}
-              />
-            </div>
-
-            {/* Ratio buttons */}
-            <div className="ratio-btns">
-              {RATIOS.map(ratio => (
-                <button
-                  key={ratio.key}
-                  className={
-                    "ratio-btn" + (selectedRatio.key === ratio.key ? " selected" : "")
-                  }
-                  onClick={() => setSelectedRatio(ratio)}
-                >
-                  {ratio.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Copy/Download buttons */}
-            <div className="export-actions">
-              <button
-                className="copy-btn"
-                onClick={handleCopy}
-                title="Copy image"
-              >
-                Copy
-              </button>
-              {canvasUrl &&
-                <a href={canvasUrl} download="bookcover-export.jpg" className="download-link">
-                  <button className="download-btn" title="Download image">
-                    <CloudDownload size={22} />
-                  </button>
-                </a>
-              }
-            </div>
-            {/* Copy message */}
-            <div className="copy-msg">
-              {copyMsg}
-            </div>
+              /> :
+              <span className="preview-placeholder">
+                Export preview
+              </span>
+            }
+            <img
+              ref={imgRef}
+              src={imgUrl}
+              alt=""
+              className="hidden-img"
+              crossOrigin="anonymous"
+              onLoad={renderCanvas}
+            />
           </div>
-        </section>
+        </div>
+
+        {/* 3. Ratio buttons */}
+        <div className="ratio-btns">
+          {RATIOS.map(ratio => (
+            <button
+              key={ratio.key}
+              className={
+                "ratio-btn" + (selectedRatio.key === ratio.key ? " selected" : "")
+              }
+              onClick={() => setSelectedRatio(ratio)}
+            >
+              {ratio.label}
+            </button>
+          ))}
+        </div>
+
+        {/* 4. Export buttons */}
+        <div className="export-actions">
+          <button
+            className="copy-btn"
+            onClick={handleCopy}
+            title="Copy image"
+          >
+            Copy
+          </button>
+          {canvasUrl &&
+            <a href={canvasUrl} download="bookcover-export.jpg" className="download-link">
+              <button className="download-btn" title="Download image">
+                <CloudDownload size={19} />
+              </button>
+            </a>
+          }
+        </div>
+        {/* Copy message */}
+        <div className="copy-msg">
+          {copyMsg}
+        </div>
+        {/* 5. Disclaimer */}
+        <div className="disclaimer">
+          This web app processes all images on your device. No image data is uploaded or saved.
+        </div>
       </div>
 
-      {/* FOOTER */}
-      <footer className="footer">
-        This web app is designed by Tino Bookstore.
-      </footer>
-
-      {/* ALL CSS HERE */}
       <style>{`
-        body { margin: 0; padding: 0; }
+        html, body {
+          background: #fff;
+          margin: 0;
+          padding: 0;
+        }
         .header-bar {
           background: ${BRAND_COLOR};
           color: #fff;
@@ -304,45 +297,35 @@ function App() {
         }
         .icon-link svg { color: #fff !important; }
 
-        .main-layout {
-          display: flex;
-          height: calc(100vh - 62px);
-          min-height: 400px;
-          background: #F8FAFB;
-        }
-        .column {
+        .center-container {
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: center;
-          height: 100%;
-          background: #fff;
+          margin: 0 auto;
+          width: 100%;
+          max-width: 650px;
+          min-height: calc(100vh - 62px - 42px);
         }
-        .left-column { width: 25%; min-width: 340px; }
-        .right-column { width: 75%; }
 
-        .upload-panel {
-          width: 310px;
-          min-height: 292px;
-          border-radius: 36px;
-          box-shadow: 0 4px 26px #abe9fa18;
+        .actions-row {
           display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 38px 22px 32px 22px;
-          background: #fff;
+          gap: 16px;
+          margin-top: 54px;
+          margin-bottom: 3px;
+          width: 100%;
+          justify-content: center;
         }
         .clipboard-btn, .upload-btn {
-          width: 205px;
-          height: 46px;
-          border-radius: 18px;
-          font-weight: 600;
-          font-size: 17px;
-          margin-bottom: 13px;
+          width: 180px;
+          height: 38px;
+          border-radius: 13px;
+          font-weight: 500;
+          font-size: 15px;
+          margin: 0;
           display: flex;
           align-items: center;
-          gap: 10px;
-          border: 1.7px solid #d8e5eb;
+          gap: 8px;
+          border: 1.5px solid #d8e5eb;
           background: #f7fafd;
           color: #2ea9b6;
           cursor: pointer;
@@ -350,43 +333,39 @@ function App() {
           transition: background 0.15s;
         }
         .clipboard-btn:disabled { cursor: wait; opacity: 0.72; }
-        .btn-spinner { font-size: 18px; }
-        .btn-icon { display: flex; align-items: center; }
         .filename-text {
-          font-size: 14.5px;
-          margin-top: 2px;
+          font-size: 13.5px;
+          margin-top: 6px;
           color: #93a3ad;
           font-weight: 500;
           text-align: center;
         }
 
         .result-panel {
-          width: 420px;
-          min-height: 500px;
-          background: #fff;
-          border-radius: 36px;
-          box-shadow: 0 4px 26px #abe9fa18;
+          width: 100%;
           display: flex;
           flex-direction: column;
           align-items: center;
-          padding: 38px 28px 28px 28px;
+          margin-top: 34px;
         }
         .export-canvas {
-          width: 272px;
-          height: 272px;
-          border-radius: 27px;
-          box-shadow: 0 1.5px 12px #54cfe915;
+          width: 294px;
+          height: 294px;
+          background: #fff;
+          margin: 0 auto;
           display: flex;
           align-items: center;
           justify-content: center;
           position: relative;
-          background: #fff;
+          box-shadow: 0 1.5px 12px #54cfe915;
+          /* removed border-radius */
         }
+        .sharp-corner { border-radius: 0 !important; }
         .canvas-img {
           width: 100%;
           height: 100%;
           object-fit: contain;
-          border-radius: 27px;
+          border-radius: 0 !important;
           background: #fff;
         }
         .hidden-img { display: none; }
@@ -397,20 +376,20 @@ function App() {
         }
 
         .ratio-btns {
-          margin-top: 28px;
+          margin-top: 30px;
           width: 100%;
           display: flex;
           justify-content: center;
-          gap: 14px;
+          gap: 12px;
         }
         .ratio-btn {
-          padding: 8px 28px;
+          padding: 7px 23px;
           background: #f2fafd;
           color: #41b7c2;
           border: none;
-          border-radius: 16px;
+          border-radius: 13px;
           font-weight: 700;
-          font-size: 17px;
+          font-size: 15px;
           cursor: pointer;
           outline: none;
           letter-spacing: 0.2px;
@@ -423,9 +402,9 @@ function App() {
         }
 
         .export-actions {
-          margin-top: 18px;
+          margin-top: 22px;
           display: flex;
-          justify-content: flex-end;
+          justify-content: center;
           width: 100%;
           gap: 11px;
         }
@@ -433,10 +412,10 @@ function App() {
           background: ${BRAND_COLOR};
           color: #fff;
           border: none;
-          border-radius: 16px;
-          padding: 10px 28px;
+          border-radius: 12px;
+          padding: 8px 26px;
           font-weight: 700;
-          font-size: 16.5px;
+          font-size: 15px;
           letter-spacing: 0.15px;
           display: flex;
           align-items: center;
@@ -447,10 +426,10 @@ function App() {
           background: #f7fafd;
           color: ${BRAND_COLOR};
           border: 1.5px solid #dbeaea;
-          border-radius: 16px;
-          padding: 10px 13px;
+          border-radius: 12px;
+          padding: 8px 14px;
           font-weight: 700;
-          font-size: 16px;
+          font-size: 15px;
           display: flex;
           align-items: center;
           cursor: pointer;
@@ -461,16 +440,22 @@ function App() {
           color: #21b174;
           font-weight: 500;
           text-align: center;
-          margin-top: 3px;
+          margin-top: 2px;
         }
 
-        .footer {
-          font-size: 15px;
-          color: #8ea8ad;
-          padding: 17px 0 13px 48px;
-          font-weight: 600;
-          letter-spacing: 0.1px;
-          user-select: none;
+        .disclaimer {
+          width: 100%;
+          font-size: 13.5px;
+          color: #9bb1b7;
+          font-weight: 500;
+          text-align: center;
+          margin-top: 54px;
+          margin-bottom: 22px;
+        }
+
+        @media (max-width: 700px) {
+          .center-container { max-width: 98vw; }
+          .export-canvas { width: 98vw; max-width: 94vw; height: 98vw; max-height: 98vw; }
         }
       `}</style>
     </div>
