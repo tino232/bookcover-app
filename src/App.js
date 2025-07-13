@@ -1,64 +1,57 @@
 import React, { useRef, useState } from "react";
-import { Download, Copy } from "lucide-react"; // Feather-style icons
+import { Upload, ClipboardCopy, Copy, Facebook, Instagram, Globe } from "lucide-react";
 
 const RATIOS = [
-  { key: "auto", label: "Auto", w: 500, h: 400 },
-  { key: "square", label: "Square", w: 600, h: 600 },
-  { key: "insta", label: "Instagram post", w: 1080, h: 1350 },
+  { key: "1:1", label: "1:1", w: 600, h: 600 },
+  { key: "4:5", label: "4:5", w: 640, h: 800 },
+  { key: "9:16", label: "9:16", w: 720, h: 1280 },
 ];
+
+const BRAND_COLOR = "#37BAC2";
 
 function App() {
   const [imgUrl, setImgUrl] = useState("");
-  const [mainColor, setMainColor] = useState("#37BAC2");
   const [canvasUrl, setCanvasUrl] = useState("");
   const [selectedRatio, setSelectedRatio] = useState(RATIOS[0]);
+  const [isClipboardLoading, setClipboardLoading] = useState(false);
   const [copyMsg, setCopyMsg] = useState("");
   const imgRef = useRef();
 
-  // Main color extraction (average color)
-  const getMainColor = (img) => {
-    const canvas = document.createElement("canvas");
-    canvas.width = img.width;
-    canvas.height = img.height;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(img, 0, 0);
-    const data = ctx.getImageData(0, 0, img.width, img.height).data;
-    let r = 0, g = 0, b = 0, count = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      r += data[i];
-      g += data[i + 1];
-      b += data[i + 2];
-      count++;
-    }
-    return (
-      "#" +
-      [Math.round(r / count), Math.round(g / count), Math.round(b / count)]
-        .map((x) => x.toString(16).padStart(2, "0"))
-        .join("")
-    );
-  };
-
-  // Handle upload
+  // Handle upload from file
   const handleImage = (e) => {
     setCopyMsg("");
     const file = e.target.files[0];
     if (!file) return;
     const url = URL.createObjectURL(file);
     setImgUrl(url);
-
-    const img = new window.Image();
-    img.src = url;
-    img.onload = () => {
-      const color = getMainColor(img);
-      setMainColor(color);
-    };
   };
 
-  // Render canvas for preview/export
+  // Handle paste from clipboard
+  const handlePasteClipboard = async () => {
+    setClipboardLoading(true);
+    setCopyMsg("");
+    try {
+      const clipboardItems = await navigator.clipboard.read();
+      for (const item of clipboardItems) {
+        if (item.types.includes('image/png') || item.types.includes('image/jpeg')) {
+          const blob = await item.getType(item.types[0]);
+          const url = URL.createObjectURL(blob);
+          setImgUrl(url);
+          setClipboardLoading(false);
+          return;
+        }
+      }
+      setCopyMsg("No image in clipboard.");
+    } catch {
+      setCopyMsg("Clipboard not supported.");
+    }
+    setClipboardLoading(false);
+  };
+
+  // Draw the export canvas with watermark
   const renderCanvas = () => {
     if (!imgUrl) return;
     const { w, h } = selectedRatio;
-
     const canvas = document.createElement("canvas");
     canvas.width = w;
     canvas.height = h;
@@ -66,30 +59,25 @@ function App() {
 
     // Gradient background
     const gradient = ctx.createLinearGradient(0, 0, w, h);
-    gradient.addColorStop(0, "#37BAC2");
-    gradient.addColorStop(1, mainColor);
-
+    gradient.addColorStop(0, BRAND_COLOR);
+    gradient.addColorStop(1, "#fff");
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, w, h);
 
-    // Draw book cover (1/6 area)
+    // Draw book cover (centered, not exceeding 60% result size)
     const img = imgRef.current;
     if (img) {
-      const area = (w * h) / 6;
+      const maxW = w * 0.60;
+      const maxH = h * 0.60;
       const aspect = img.naturalWidth / img.naturalHeight;
-      let imgH = Math.sqrt(area / aspect);
-      let imgW = imgH * aspect;
-      if (imgW > w * 0.8) {
-        imgW = w * 0.8;
-        imgH = imgW / aspect;
-      }
-      if (imgH > h * 0.8) {
-        imgH = h * 0.8;
+      let imgW = maxW, imgH = maxW / aspect;
+      if (imgH > maxH) {
+        imgH = maxH;
         imgW = imgH * aspect;
       }
       ctx.save();
-      ctx.shadowColor = "rgba(50,150,180,0.20)";
-      ctx.shadowBlur = 24;
+      ctx.shadowColor = "rgba(55,186,194,0.09)";
+      ctx.shadowBlur = 32;
       ctx.drawImage(
         img,
         (w - imgW) / 2,
@@ -99,16 +87,27 @@ function App() {
       );
       ctx.restore();
     }
-    const url = canvas.toDataURL("image/png");
-    setCanvasUrl(url);
+
+    // Draw watermark (bottom right, margin 24px)
+    ctx.save();
+    ctx.font = `bold ${Math.round(h * 0.045)}px Inter, Arial, sans-serif`;
+    ctx.textBaseline = "bottom";
+    ctx.textAlign = "right";
+    ctx.globalAlpha = 0.42;
+    ctx.fillStyle = "#111";
+    ctx.fillText("@tinoreading", w - 24, h - 24);
+    ctx.restore();
+
+    setCanvasUrl(canvas.toDataURL("image/png"));
   };
 
+  // Auto render when image or ratio changes
   React.useEffect(() => {
     if (imgUrl) renderCanvas();
     // eslint-disable-next-line
-  }, [imgUrl, mainColor, selectedRatio]);
+  }, [imgUrl, selectedRatio]);
 
-  // Copy image to clipboard
+  // Copy export to clipboard
   const handleCopy = async () => {
     if (!canvasUrl) return;
     try {
@@ -118,303 +117,304 @@ function App() {
         new window.ClipboardItem({ [blob.type]: blob }),
       ]);
       setCopyMsg("Copied!");
-      setTimeout(() => setCopyMsg(""), 1200);
-    } catch (e) {
-      setCopyMsg("Copy not supported.");
-      setTimeout(() => setCopyMsg(""), 1600);
+      setTimeout(() => setCopyMsg(""), 1300);
+    } catch {
+      setCopyMsg("Copy failed.");
+      setTimeout(() => setCopyMsg(""), 1500);
     }
   };
 
   return (
     <div style={{
-      display: "flex",
       minHeight: "100vh",
-      background: "#F9FAFB"
+      background: "#F8FAFB",
+      fontFamily: "Inter, Arial, sans-serif",
+      display: "flex",
+      flexDirection: "column"
     }}>
-      {/* Left panel: upload */}
+      {/* Header */}
       <div style={{
-        flex: "0 0 340px",
-        padding: 36,
-        borderRight: "1.5px solid #e5eaf0",
         display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
         alignItems: "center",
-        background: "#f8fcfd",
-        minHeight: "100vh"
+        justifyContent: "space-between",
+        height: 58,
+        padding: "0 44px 0 36px",
+        borderBottom: "1.5px solid #e9f0f1",
+        background: "#fff",
       }}>
+        <div style={{fontWeight: 700, fontSize: 20, color: "#1b6272"}}>@tinoreading</div>
+        <div style={{display: "flex", gap: 24}}>
+          <a href="https://tinoreading.club/" target="_blank" rel="noopener noreferrer">
+            <Globe size={21} color="#37BAC2" />
+          </a>
+          <a href="https://facebook.com/tinoreading" target="_blank" rel="noopener noreferrer">
+            <Facebook size={21} color="#37BAC2" />
+          </a>
+          <a href="https://instagram.com/tinoreading" target="_blank" rel="noopener noreferrer">
+            <Instagram size={21} color="#37BAC2" />
+          </a>
+        </div>
+      </div>
+
+      {/* Main layout */}
+      <div style={{
+        flex: 1,
+        display: "flex",
+        height: "calc(100vh - 58px)",
+        minHeight: 400
+      }}>
+        {/* Left: Upload */}
         <div style={{
-          width: "100%",
-          maxWidth: 320,
-          borderRadius: 30,
-          background: "#fff",
-          boxShadow: "0 8px 36px #baeaf71a",
-          padding: 36,
-          margin: "0 auto",
+          flex: "0 0 390px",
+          padding: "42px 24px 0 42px",
           display: "flex",
           flexDirection: "column",
-          alignItems: "center"
+          alignItems: "center",
+          justifyContent: "center"
         }}>
           <div style={{
-            fontWeight: 700,
-            fontSize: 19,
-            marginBottom: 20,
-            letterSpacing: 0.6
-          }}>Book Cover Upload</div>
-          <label
-            htmlFor="upload"
-            style={{
-              display: "block",
+            width: 310,
+            minHeight: 300,
+            background: "#fff",
+            borderRadius: 36,
+            boxShadow: "0 4px 26px #abe9fa18",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            padding: "38px 22px 32px 22px"
+          }}>
+            <label htmlFor="upload-image" style={{
+              cursor: "pointer",
+              borderRadius: 20,
               padding: "12px 22px",
               background: "#F2FCFD",
-              color: "#1792a7",
-              borderRadius: 18,
-              border: "2px dashed #37BAC2",
+              border: `2px dashed ${BRAND_COLOR}`,
+              color: BRAND_COLOR,
               fontWeight: 600,
-              fontSize: 16,
-              cursor: "pointer",
-              marginBottom: 22,
-              textAlign: "center",
-              width: "100%"
-            }}
-          >
-            <span style={{marginRight: 8, fontSize: 20}}>
-              <Download size={20} style={{verticalAlign: "middle"}} />
-            </span>
-            Upload image
-            <input
-              id="upload"
-              type="file"
-              accept="image/*"
-              onChange={handleImage}
-              style={{ display: "none" }}
-            />
-          </label>
-          {imgUrl && (
+              fontSize: 17,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 30
+            }}>
+              <Upload size={21} style={{marginBottom: -2}} />
+              <span>Upload image</span>
+              <input id="upload-image" type="file" accept="image/*" onChange={handleImage} style={{display: "none"}} />
+            </label>
+
+            <button onClick={handlePasteClipboard} disabled={isClipboardLoading}
+              style={{
+                background: "#f7fafd",
+                border: "1.6px solid #e1eaea",
+                borderRadius: 18,
+                color: "#3e9cab",
+                fontWeight: 600,
+                fontSize: 16,
+                padding: "10px 16px",
+                marginBottom: 12,
+                marginTop: 2,
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 9,
+                cursor: isClipboardLoading ? "wait" : "pointer",
+                transition: "background 0.18s"
+              }}>
+              <ClipboardCopy size={20} />
+              <span>
+                {isClipboardLoading ? "Pasting..." : "Paste from clipboard"}
+              </span>
+            </button>
+
+            {/* Book cover preview */}
             <div style={{
-              width: 140,
-              height: 140,
-              borderRadius: 16,
-              overflow: "hidden",
-              margin: "0 auto",
-              background: "#f6fbfd",
-              boxShadow: "0 1px 7px #67d4ed15",
-              marginBottom: 16,
+              marginTop: 20,
+              width: 136,
+              height: 136,
+              borderRadius: 17,
+              background: "#f5fafd",
+              boxShadow: "0 1px 8px #1d929811",
               display: "flex",
               alignItems: "center",
               justifyContent: "center"
             }}>
-              <img
-                ref={imgRef}
-                src={imgUrl}
-                alt="book cover"
-                style={{
-                  maxWidth: "100%",
-                  maxHeight: "100%",
-                  borderRadius: 14,
-                  objectFit: "contain"
-                }}
-              />
+              {imgUrl ?
+                <img
+                  ref={imgRef}
+                  src={imgUrl}
+                  alt="book cover"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                    borderRadius: 15
+                  }}
+                  crossOrigin="anonymous"
+                /> :
+                <span style={{
+                  color: "#bbb",
+                  fontWeight: 500
+                }}>
+                  No image
+                </span>
+              }
             </div>
-          )}
-          {imgUrl && (
+          </div>
+        </div>
+        {/* Right: Export/Preview */}
+        <div style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "0 40px 0 0"
+        }}>
+          <div style={{
+            width: 380,
+            minHeight: 480,
+            background: "#fff",
+            borderRadius: 36,
+            boxShadow: "0 4px 26px #abe9fa18",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            padding: "36px 28px 28px 28px"
+          }}>
+            {/* Result preview gradient area */}
             <div style={{
+              width: 232,
+              height: 232,
+              borderRadius: 23,
+              background: `linear-gradient(135deg, ${BRAND_COLOR}, #fff)`,
+              boxShadow: "0 1.5px 12px #54cfe925",
               display: "flex",
               alignItems: "center",
-              marginTop: 4,
-              fontSize: 14,
-              fontWeight: 600
+              justifyContent: "center",
+              position: "relative"
             }}>
-              <span style={{
-                display: "inline-block",
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                background: mainColor,
-                border: "2.5px solid #37BAC2",
-                marginRight: 8
-              }}></span>
-              <span style={{color: "#1792a7"}}>{mainColor}</span>
-            </div>
-          )}
-        </div>
-      </div>
-      {/* Right panel: export tool */}
-      <div style={{
-        flex: 1,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "100vh",
-        padding: 0
-      }}>
-        <div style={{
-          background: "#fff",
-          borderRadius: 40,
-          boxShadow: "0 8px 36px #baeaf71a",
-          padding: "38px 38px 28px 38px",
-          minWidth: 360,
-          maxWidth: 560,
-          width: "90%",
-          margin: "0 auto",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center"
-        }}>
-          {/* Top bar: Ratio dropdown + buttons */}
-          <div style={{
-            width: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-start",
-            marginBottom: 20
-          }}>
-            {/* Ratio Dropdown */}
-            <div style={{ position: "relative" }}>
-              <select
-                value={selectedRatio.key}
-                onChange={e =>
-                  setSelectedRatio(RATIOS.find(r => r.key === e.target.value))
-                }
-                style={{
-                  appearance: "none",
-                  padding: "9px 32px 9px 16px",
-                  fontSize: 17,
-                  borderRadius: 16,
-                  border: "1.7px solid #c6eaf0",
-                  background: "#f7fdff",
-                  fontWeight: 600,
-                  outline: "none",
-                  boxShadow: "0 1.5px 10px #e5f7fa1c",
-                  marginRight: 12,
-                  minWidth: 108,
-                  color: "#1f595f"
-                }}>
-                {RATIOS.map(r => (
-                  <option value={r.key} key={r.key}>{r.label}</option>
-                ))}
-              </select>
-              {/* Down arrow */}
-              <span style={{
-                position: "absolute",
-                right: 12,
-                top: "50%",
-                transform: "translateY(-50%)",
-                pointerEvents: "none",
-                color: "#1792a7",
-                fontSize: 18
-              }}>▼</span>
-            </div>
-            {/* Ratio label */}
-            <span style={{
-              fontWeight: 700,
-              fontSize: 16.5,
-              background: "#e6f9fc",
-              padding: "7px 18px",
-              borderRadius: 18,
-              marginLeft: 8,
-              color: "#37BAC2"
-            }}>
-              {selectedRatio.label}
-            </span>
-            <div style={{ flex: 1 }} />
-            {/* Copy & Download icons (no text) */}
-            {canvasUrl && (
-              <>
-                <button
-                  onClick={handleCopy}
+              {canvasUrl ?
+                <img
+                  src={canvasUrl}
+                  alt="result"
                   style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                    borderRadius: 23,
+                    background: "#fff"
+                  }}
+                /> :
+                <span style={{
+                  color: "#b9babd",
+                  fontSize: 18,
+                  fontWeight: 500
+                }}>
+                  Export preview
+                </span>
+              }
+            </div>
+            {/* Ratio buttons */}
+            <div style={{
+              marginTop: 22,
+              width: "100%",
+              display: "flex",
+              justifyContent: "center",
+              gap: 12
+            }}>
+              {RATIOS.map((ratio, i) => (
+                <button key={ratio.key}
+                  onClick={() => setSelectedRatio(ratio)}
+                  style={{
+                    padding: "7.5px 25px",
+                    background: selectedRatio.key === ratio.key ? BRAND_COLOR : "#f2fafd",
+                    color: selectedRatio.key === ratio.key ? "#fff" : "#41b7c2",
                     border: "none",
-                    background: "#f7fdff",
-                    color: "#1792a7",
-                    padding: "11px 15px",
-                    borderRadius: 18,
-                    marginRight: 6,
+                    borderRadius: 16,
                     fontWeight: 700,
                     fontSize: 16,
-                    boxShadow: "0 1px 5px #6cd8de14",
+                    boxShadow: selectedRatio.key === ratio.key ? "0 1.5px 6px #37bac229" : undefined,
                     cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    minWidth: 0
-                  }}
-                  aria-label="Copy image"
-                >
-                  <Copy size={22} strokeWidth={2.2} />
+                    outline: "none",
+                    letterSpacing: 0.2
+                  }}>
+                  {ratio.label}
                 </button>
-                <a href={canvasUrl} download="background.png"
-                  style={{ textDecoration: "none" }}>
+              ))}
+            </div>
+            {/* Copy/download row */}
+            <div style={{
+              marginTop: 18,
+              display: "flex",
+              justifyContent: "flex-end",
+              width: "100%"
+            }}>
+              <button onClick={handleCopy}
+                style={{
+                  background: "#f8fdff",
+                  border: "1.5px solid #dbeaea",
+                  borderRadius: 15,
+                  padding: "9px 13px",
+                  color: "#37bac2",
+                  fontWeight: 700,
+                  fontSize: 16,
+                  display: "flex",
+                  alignItems: "center",
+                  cursor: "pointer",
+                  marginRight: 5
+                }}
+                title="Copy image"
+              >
+                <Copy size={20} />
+              </button>
+              {canvasUrl &&
+                <a href={canvasUrl} download="bookcover-export.png" style={{
+                  textDecoration: "none"
+                }}>
                   <button
                     style={{
-                      border: "none",
-                      background: "#37BAC2",
+                      background: "#37bac2",
                       color: "#fff",
-                      padding: "11px 15px",
-                      borderRadius: 18,
+                      border: "none",
+                      borderRadius: 15,
+                      padding: "9px 13px",
                       fontWeight: 700,
                       fontSize: 16,
-                      boxShadow: "0 2px 6px #6cd8de24",
-                      cursor: "pointer",
-                      marginLeft: 2,
                       display: "flex",
                       alignItems: "center",
-                      minWidth: 0
+                      cursor: "pointer"
                     }}
-                    aria-label="Download image"
+                    title="Download image"
                   >
-                    <Download size={22} strokeWidth={2.2} />
+                    <Upload size={20} />
                   </button>
                 </a>
-              </>
-            )}
-          </div>
-          {/* Export preview */}
-          <div style={{
-            width: selectedRatio.w / 2.3,
-            height: selectedRatio.h / 2.3,
-            maxWidth: 370,
-            maxHeight: 580,
-            minHeight: 220,
-            borderRadius: 26,
-            background: `linear-gradient(135deg,#37BAC2,${mainColor})`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 4px 16px #bfeef927",
-            marginBottom: 14,
-            border: "2.5px solid #f2fafd"
-          }}>
-            {canvasUrl ?
-              <img
-                src={canvasUrl}
-                alt="result"
-                style={{
-                  maxWidth: "100%",
-                  maxHeight: "100%",
-                  borderRadius: 26,
-                  boxShadow: "0 2px 10px #5fcdd122"
-                }}
-              /> :
-              <span style={{
-                color: "#aaa",
-                fontSize: 18
-              }}>
-                {imgUrl ? "Creating preview..." : "No book cover uploaded"}
-              </span>
-            }
-          </div>
-          {/* Copy notification */}
-          <div style={{
-            minHeight: 22,
-            fontSize: 15,
-            color: copyMsg.includes("Copy") || copyMsg.includes("copied") ? "#21b174" : "#d85c5c",
-            fontWeight: 500,
-            textAlign: "center"
-          }}>
-            {copyMsg}
+              }
+            </div>
+            {/* Copy message */}
+            <div style={{
+              minHeight: 22,
+              fontSize: 15,
+              color: copyMsg.includes("Copy") ? "#21b174" : "#d85c5c",
+              fontWeight: 500,
+              textAlign: "center",
+              marginTop: 3
+            }}>
+              {copyMsg}
+            </div>
           </div>
         </div>
+      </div>
+      {/* Footer */}
+      <div style={{
+        fontSize: 15,
+        color: "#8ea8ad",
+        padding: "17px 0 13px 48px",
+        fontWeight: 600,
+        letterSpacing: 0.1,
+        userSelect: "none"
+      }}>
+        This web app is designed by Tino Bookstore.
       </div>
     </div>
   );
