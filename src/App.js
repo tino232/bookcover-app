@@ -126,11 +126,6 @@ export default function App() {
       const y = (h - coverH) / 2 - 0.04 * h;
 
       ctx.save();
-      ctx.shadowColor = "rgba(0,0,0,0.18)";
-      ctx.shadowBlur = 24;
-      ctx.shadowOffsetY = 4;
-
-      // Clip to a rounded rectangle
       const r = 5; // px radius
       ctx.beginPath();
       ctx.moveTo(x + r, y);
@@ -143,9 +138,11 @@ export default function App() {
       ctx.lineTo(x, y + r);
       ctx.quadraticCurveTo(x, y, x + r, y);
       ctx.closePath();
-      ctx.clip();
-
-      ctx.drawImage(img, x, y, coverW, coverH);
+      ctx.shadowColor = "rgba(0,0,0,0.18)";
+      ctx.shadowBlur = 24;
+      ctx.shadowOffsetY = 4;
+      ctx.fillStyle = "rgba(0,0,0,0.08)"; // almost invisible shadow
+      ctx.fill();
       ctx.restore();
 
       // Watermark: always 2/3 of book cover width, 40% opacity, 5px margin top
