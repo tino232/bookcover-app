@@ -1,7 +1,14 @@
 import React, { useRef, useState } from "react";
 import { Facebook, Instagram, CloudDownload } from "lucide-react";
 
-// Helper: Extract dominant color
+const BRAND_COLOR = "#37BAC2";
+const RATIOS = [
+  { key: "1:1", label: "1:1", w: 2048, h: 2048 },
+  { key: "4:5", label: "4:5", w: 1638, h: 2048 },
+  { key: "9:16", label: "9:16", w: 1152, h: 2048 },
+];
+
+// Helper: get dominant color
 function getDominantColor(img) {
   const canvas = document.createElement("canvas");
   canvas.width = img.width;
@@ -15,15 +22,6 @@ function getDominantColor(img) {
   }
   return `rgb(${Math.round(r / count)},${Math.round(g / count)},${Math.round(b / count)})`;
 }
-
-// Ratios: width:height, but height always 2048px, width auto (if needed)
-const RATIOS = [
-  { key: "1:1", label: "1:1", w: 2048, h: 2048 },
-  { key: "4:5", label: "4:5", w: 1638, h: 2048 },
-  { key: "9:16", label: "9:16", w: 1152, h: 2048 },
-];
-
-const BRAND_COLOR = "#37BAC2";
 
 function App() {
   const [imgUrl, setImgUrl] = useState("");
@@ -79,7 +77,7 @@ function App() {
   // Render export canvas with watermark
   const renderCanvas = () => {
     if (!imgUrl) return;
-    const { w, h } = selectedRatio;
+    const { w, h, key } = selectedRatio;
     const canvas = document.createElement("canvas");
     canvas.width = w;
     canvas.height = h;
@@ -92,23 +90,33 @@ function App() {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
 
-    // Draw book cover (max 75% height of export, centered horizontally)
+    // Draw book cover (dynamic size per ratio)
     const img = imgRef.current;
     if (img) {
-      const maxH = h * 0.75;
-      const maxW = w * 0.8;
       const aspect = img.naturalWidth / img.naturalHeight;
-      let drawH = maxH, drawW = maxH * aspect;
-      if (drawW > maxW) { drawW = maxW; drawH = drawW / aspect; }
-      const x = (w - drawW) / 2;
-      const y = (h - maxH) / 2;
+      // Book cover width rule per ratio:
+      let coverW;
+      if (key === "9:16") {
+        coverW = w * 0.5;
+      } else {
+        coverW = w / 3;
+      }
+      let coverH = coverW / aspect;
+      // If height exceeds 90% canvas, scale down
+      if (coverH > h * 0.9) {
+        coverH = h * 0.9;
+        coverW = coverH * aspect;
+      }
+      const x = (w - coverW) / 2;
+      // Place cover at vertical center minus some offset (to fit watermark)
+      const y = (h - coverH) / 2 - 0.04 * h;
       ctx.save();
-      ctx.shadowColor = "rgba(55,186,194,0.07)";
-      ctx.shadowBlur = 34;
-      ctx.drawImage(img, x, y, drawW, drawH);
+      ctx.shadowColor = "rgba(55,186,194,0.08)";
+      ctx.shadowBlur = 28;
+      ctx.drawImage(img, x, y, coverW, coverH);
       ctx.restore();
 
-      // Watermark: right under book cover, right-aligned
+      // Watermark under the book cover, right-aligned
       ctx.save();
       const fontSize = Math.round(h * 0.045);
       ctx.font = `bold ${fontSize}px Inter, Arial, sans-serif`;
@@ -116,8 +124,8 @@ function App() {
       ctx.textAlign = "right";
       ctx.globalAlpha = 0.82;
       ctx.fillStyle = "#fff";
-      const markY = y + drawH + fontSize * 0.35;
-      ctx.fillText("@tinoreading", x + drawW, markY);
+      const markY = y + coverH + fontSize * 0.22;
+      ctx.fillText("@tinoreading", x + coverW, markY);
       ctx.restore();
     }
 
@@ -125,7 +133,6 @@ function App() {
     setCanvasUrl(canvas.toDataURL("image/jpeg", 1.0));
   };
 
-  // Auto re-render on change
   React.useEffect(() => {
     if (imgUrl) renderCanvas();
     // eslint-disable-next-line
@@ -149,177 +156,67 @@ function App() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", fontFamily: "Inter, Arial, sans-serif", display: "flex", flexDirection: "column", background: "#F8FAFB" }}>
+    <div>
       {/* HEADER */}
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        height: 62,
-        padding: "0 46px 0 36px",
-        background: BRAND_COLOR,
-      }}>
-        <div style={{ fontWeight: 700, fontSize: 20, color: "#fff", letterSpacing: 0.6 }}>@tinoreading</div>
-        <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-          <a
-            href="https://tinoreading.club/"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              background: "#fff",
-              borderRadius: 20,
-              fontWeight: 700,
-              color: BRAND_COLOR,
-              padding: "8px 22px",
-              fontSize: 16,
-              textDecoration: "none",
-              marginRight: 6,
-              boxShadow: "0 2px 8px #abe9fa22"
-            }}>
+      <header className="header-bar">
+        <div className="brand">@tinoreading</div>
+        <div className="header-actions">
+          <a className="shop-btn" href="https://tinoreading.club/" target="_blank" rel="noopener noreferrer">
             Shop English Books
           </a>
-          <a href="https://facebook.com/tinoreading" target="_blank" rel="noopener noreferrer">
-            <Facebook size={22} color="#fff" />
+          <a href="https://facebook.com/tinoreading" target="_blank" rel="noopener noreferrer" className="icon-link">
+            <Facebook size={22} />
           </a>
-          <a href="https://instagram.com/tinoreading" target="_blank" rel="noopener noreferrer">
-            <Instagram size={22} color="#fff" />
+          <a href="https://instagram.com/tinoreading" target="_blank" rel="noopener noreferrer" className="icon-link">
+            <Instagram size={22} />
           </a>
         </div>
-      </div>
+      </header>
 
-      {/* MAIN */}
-      <div style={{ flex: 1, display: "flex", height: "calc(100vh - 62px)", minHeight: 400 }}>
-        {/* LEFT */}
-        <div style={{
-          flex: "0 0 390px",
-          padding: "44px 24px 0 44px",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center"
-        }}>
-          <div style={{
-            width: 310,
-            minHeight: 292,
-            background: "#fff",
-            borderRadius: 36,
-            boxShadow: "0 4px 26px #abe9fa18",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            padding: "38px 22px 32px 22px"
-          }}>
-            {/* Paste from clipboard */}
+      <div className="main-layout">
+        {/* LEFT COLUMN */}
+        <section className="column left-column">
+          <div className="upload-panel">
             <button
+              className="clipboard-btn"
               onClick={handlePasteClipboard}
               disabled={pasteLoading}
-              style={{
-                width: 205,
-                height: 46,
-                marginBottom: 13,
-                background: "#f7fafd",
-                border: `1.7px solid #d8e5eb`,
-                borderRadius: 18,
-                color: "#2ea9b6",
-                fontWeight: 600,
-                fontSize: 17,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-                cursor: pasteLoading ? "wait" : "pointer",
-                transition: "background 0.18s"
-              }}>
-              {pasteLoading ? (
-                <span style={{fontSize:18}}>⏳</span>
-              ) : (
-                <svg width="21" height="21" fill="none" stroke="#2ea9b6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></svg>
-              )}
+            >
+              {pasteLoading ?
+                <span className="btn-spinner">⏳</span> :
+                <span className="btn-icon">
+                  <svg width="21" height="21" fill="none" stroke="#2ea9b6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></svg>
+                </span>
+              }
               <span>Paste from clipboard</span>
             </button>
-            {/* Upload image */}
-            <label htmlFor="upload-image" style={{
-              width: 205,
-              height: 46,
-              background: "#f7fafd",
-              border: `1.7px solid #d8e5eb`,
-              borderRadius: 18,
-              color: "#2ea9b6",
-              fontWeight: 600,
-              fontSize: 17,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 10,
-              cursor: "pointer",
-              marginBottom: 9
-            }}>
-              <svg width="22" height="22" fill="none" stroke="#2ea9b6" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+            <label htmlFor="upload-image" className="upload-btn">
+              <span className="btn-icon">
+                <svg width="22" height="22" fill="none" stroke="#2ea9b6" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+              </span>
               <span>Upload image</span>
               <input id="upload-image" type="file" accept="image/*" onChange={handleImage} style={{ display: "none" }} />
             </label>
-            {/* Show filename if uploaded */}
+            {/* Filename under upload */}
             {imgFileName &&
-              <div style={{
-                fontSize: 14.5,
-                marginTop: 2,
-                color: "#93a3ad",
-                fontWeight: 500,
-                textAlign: "center"
-              }}>{imgFileName}</div>
+              <div className="filename-text">{imgFileName}</div>
             }
           </div>
-        </div>
-        {/* RIGHT */}
-        <div style={{
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "0 40px 0 0"
-        }}>
-          <div style={{
-            width: 420,
-            minHeight: 500,
-            background: "#fff",
-            borderRadius: 36,
-            boxShadow: "0 4px 26px #abe9fa18",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            padding: "38px 28px 28px 28px"
-          }}>
+        </section>
+
+        {/* RIGHT COLUMN */}
+        <section className="column right-column">
+          <div className="result-panel">
             {/* Export preview area */}
-            <div style={{
-              width: 272,
-              height: 272,
-              borderRadius: 27,
-              background: "#fff",
-              boxShadow: "0 1.5px 12px #54cfe915",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              position: "relative"
-            }}>
-              {/* Hide book preview, only show exported */}
+            <div className="export-canvas">
               {canvasUrl ?
                 <img
                   src={canvasUrl}
                   alt="result"
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "contain",
-                    borderRadius: 27,
-                    background: "#fff"
-                  }}
+                  className="canvas-img"
                   crossOrigin="anonymous"
                 /> :
-                <span style={{
-                  color: "#b9babd",
-                  fontSize: 19,
-                  fontWeight: 500
-                }}>
+                <span className="preview-placeholder">
                   Export preview
                 </span>
               }
@@ -328,116 +225,254 @@ function App() {
                 ref={imgRef}
                 src={imgUrl}
                 alt=""
-                style={{ display: "none" }}
+                className="hidden-img"
                 crossOrigin="anonymous"
                 onLoad={renderCanvas}
               />
             </div>
+
             {/* Ratio buttons */}
-            <div style={{
-              marginTop: 28,
-              width: "100%",
-              display: "flex",
-              justifyContent: "center",
-              gap: 14
-            }}>
+            <div className="ratio-btns">
               {RATIOS.map(ratio => (
                 <button
                   key={ratio.key}
+                  className={
+                    "ratio-btn" + (selectedRatio.key === ratio.key ? " selected" : "")
+                  }
                   onClick={() => setSelectedRatio(ratio)}
-                  style={{
-                    padding: "8px 28px",
-                    background: selectedRatio.key === ratio.key ? BRAND_COLOR : "#f2fafd",
-                    color: selectedRatio.key === ratio.key ? "#fff" : "#41b7c2",
-                    border: "none",
-                    borderRadius: 16,
-                    fontWeight: 700,
-                    fontSize: 17,
-                    boxShadow: selectedRatio.key === ratio.key ? "0 1.5px 6px #37bac229" : undefined,
-                    cursor: "pointer",
-                    outline: "none",
-                    letterSpacing: 0.2
-                  }}>
+                >
                   {ratio.label}
                 </button>
               ))}
             </div>
+
             {/* Copy/Download buttons */}
-            <div style={{
-              marginTop: 18,
-              display: "flex",
-              justifyContent: "flex-end",
-              width: "100%",
-              gap: 11
-            }}>
+            <div className="export-actions">
               <button
+                className="copy-btn"
                 onClick={handleCopy}
-                style={{
-                  background: "#37BAC2",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 16,
-                  padding: "10px 28px",
-                  fontWeight: 700,
-                  fontSize: 16.5,
-                  letterSpacing: 0.15,
-                  display: "flex",
-                  alignItems: "center",
-                  cursor: "pointer"
-                }}
                 title="Copy image"
               >
                 Copy
               </button>
               {canvasUrl &&
-                <a href={canvasUrl} download="bookcover-export.jpg" style={{
-                  textDecoration: "none"
-                }}>
-                  <button
-                    style={{
-                      background: "#f7fafd",
-                      color: "#37BAC2",
-                      border: "1.5px solid #dbeaea",
-                      borderRadius: 16,
-                      padding: "10px 13px",
-                      fontWeight: 700,
-                      fontSize: 16,
-                      display: "flex",
-                      alignItems: "center",
-                      cursor: "pointer"
-                    }}
-                    title="Download image"
-                  >
+                <a href={canvasUrl} download="bookcover-export.jpg" className="download-link">
+                  <button className="download-btn" title="Download image">
                     <CloudDownload size={22} />
                   </button>
                 </a>
               }
             </div>
             {/* Copy message */}
-            <div style={{
-              minHeight: 22,
-              fontSize: 15,
-              color: copyMsg.includes("Copy") ? "#21b174" : "#d85c5c",
-              fontWeight: 500,
-              textAlign: "center",
-              marginTop: 3
-            }}>
+            <div className="copy-msg">
               {copyMsg}
             </div>
           </div>
-        </div>
+        </section>
       </div>
+
       {/* FOOTER */}
-      <div style={{
-        fontSize: 15,
-        color: "#8ea8ad",
-        padding: "17px 0 13px 48px",
-        fontWeight: 600,
-        letterSpacing: 0.1,
-        userSelect: "none"
-      }}>
+      <footer className="footer">
         This web app is designed by Tino Bookstore.
-      </div>
+      </footer>
+
+      {/* ALL CSS HERE */}
+      <style>{`
+        body { margin: 0; padding: 0; }
+        .header-bar {
+          background: ${BRAND_COLOR};
+          color: #fff;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          height: 62px;
+          padding: 0 46px 0 36px;
+        }
+        .brand { font-weight: 700; font-size: 20px; letter-spacing: 0.6px; }
+        .header-actions { display: flex; align-items: center; gap: 20px; }
+        .shop-btn {
+          background: #fff;
+          border-radius: 20px;
+          font-weight: 700;
+          color: ${BRAND_COLOR};
+          padding: 8px 22px;
+          font-size: 16px;
+          text-decoration: none;
+          margin-right: 6px;
+          box-shadow: 0 2px 8px #abe9fa22;
+          border: none;
+        }
+        .icon-link svg { color: #fff !important; }
+
+        .main-layout {
+          display: flex;
+          height: calc(100vh - 62px);
+          min-height: 400px;
+          background: #F8FAFB;
+        }
+        .column {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100%;
+          background: #fff;
+        }
+        .left-column { width: 25%; min-width: 340px; }
+        .right-column { width: 75%; }
+
+        .upload-panel {
+          width: 310px;
+          min-height: 292px;
+          border-radius: 36px;
+          box-shadow: 0 4px 26px #abe9fa18;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 38px 22px 32px 22px;
+          background: #fff;
+        }
+        .clipboard-btn, .upload-btn {
+          width: 205px;
+          height: 46px;
+          border-radius: 18px;
+          font-weight: 600;
+          font-size: 17px;
+          margin-bottom: 13px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          border: 1.7px solid #d8e5eb;
+          background: #f7fafd;
+          color: #2ea9b6;
+          cursor: pointer;
+          justify-content: center;
+          transition: background 0.15s;
+        }
+        .clipboard-btn:disabled { cursor: wait; opacity: 0.72; }
+        .btn-spinner { font-size: 18px; }
+        .btn-icon { display: flex; align-items: center; }
+        .filename-text {
+          font-size: 14.5px;
+          margin-top: 2px;
+          color: #93a3ad;
+          font-weight: 500;
+          text-align: center;
+        }
+
+        .result-panel {
+          width: 420px;
+          min-height: 500px;
+          background: #fff;
+          border-radius: 36px;
+          box-shadow: 0 4px 26px #abe9fa18;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 38px 28px 28px 28px;
+        }
+        .export-canvas {
+          width: 272px;
+          height: 272px;
+          border-radius: 27px;
+          box-shadow: 0 1.5px 12px #54cfe915;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          position: relative;
+          background: #fff;
+        }
+        .canvas-img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          border-radius: 27px;
+          background: #fff;
+        }
+        .hidden-img { display: none; }
+        .preview-placeholder {
+          color: #b9babd;
+          font-size: 19px;
+          font-weight: 500;
+        }
+
+        .ratio-btns {
+          margin-top: 28px;
+          width: 100%;
+          display: flex;
+          justify-content: center;
+          gap: 14px;
+        }
+        .ratio-btn {
+          padding: 8px 28px;
+          background: #f2fafd;
+          color: #41b7c2;
+          border: none;
+          border-radius: 16px;
+          font-weight: 700;
+          font-size: 17px;
+          cursor: pointer;
+          outline: none;
+          letter-spacing: 0.2px;
+          transition: background 0.18s, color 0.18s;
+        }
+        .ratio-btn.selected {
+          background: ${BRAND_COLOR};
+          color: #fff;
+          box-shadow: 0 1.5px 6px #37bac229;
+        }
+
+        .export-actions {
+          margin-top: 18px;
+          display: flex;
+          justify-content: flex-end;
+          width: 100%;
+          gap: 11px;
+        }
+        .copy-btn {
+          background: ${BRAND_COLOR};
+          color: #fff;
+          border: none;
+          border-radius: 16px;
+          padding: 10px 28px;
+          font-weight: 700;
+          font-size: 16.5px;
+          letter-spacing: 0.15px;
+          display: flex;
+          align-items: center;
+          cursor: pointer;
+        }
+        .download-link { text-decoration: none; }
+        .download-btn {
+          background: #f7fafd;
+          color: ${BRAND_COLOR};
+          border: 1.5px solid #dbeaea;
+          border-radius: 16px;
+          padding: 10px 13px;
+          font-weight: 700;
+          font-size: 16px;
+          display: flex;
+          align-items: center;
+          cursor: pointer;
+        }
+        .copy-msg {
+          min-height: 22px;
+          font-size: 15px;
+          color: #21b174;
+          font-weight: 500;
+          text-align: center;
+          margin-top: 3px;
+        }
+
+        .footer {
+          font-size: 15px;
+          color: #8ea8ad;
+          padding: 17px 0 13px 48px;
+          font-weight: 600;
+          letter-spacing: 0.1px;
+          user-select: none;
+        }
+      `}</style>
     </div>
   );
 }
