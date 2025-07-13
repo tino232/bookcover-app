@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
+import logo from './assets/logo.png';
 import { Facebook, Instagram, CloudDownload } from "lucide-react";
 
 const BRAND_COLOR = "#37BAC2";
@@ -33,7 +34,6 @@ export default function App() {
   const imgRef = useRef();
   const [imageAreaHeight, setImageAreaHeight] = useState(320);
 
-  // Dynamic height adjustment to keep body + header = 100vh
   useEffect(() => {
     function adjustHeight() {
       const headerH = 62;
@@ -44,7 +44,7 @@ export default function App() {
       const exportH = 54;
       const msgH = copyMsg ? 22 : 0;
       const disclaimerH = 34;
-      const marginSum = 32 + 28 + 34 + 12; // margins/paddings, tweak if needed
+      const marginSum = 32 + 28 + 34 + 12;
       let remain = bodyH - (actionsH + fileH + ratioH + exportH + msgH + disclaimerH + marginSum);
       setImageAreaHeight(Math.max(180, remain));
     }
@@ -54,7 +54,6 @@ export default function App() {
     // eslint-disable-next-line
   }, [imgFileName, copyMsg]);
 
-  // Handle file upload
   const handleImage = (e) => {
     setCopyMsg("");
     const file = e.target.files[0];
@@ -67,7 +66,6 @@ export default function App() {
     img.onload = () => setMainColor(getDominantColor(img));
   };
 
-  // Paste from clipboard
   const handlePasteClipboard = async () => {
     setPasteLoading(true);
     setCopyMsg("");
@@ -95,7 +93,6 @@ export default function App() {
     setPasteLoading(false);
   };
 
-  // Render export canvas with watermark
   const renderCanvas = () => {
     if (!imgUrl) return;
     const { w, h, key } = RATIOS[selectedIdx];
@@ -113,7 +110,7 @@ export default function App() {
     if (img) {
       const aspect = img.naturalWidth / img.naturalHeight;
       let coverW;
-      if (key === "9:16") coverW = w * 0.5;
+      if (key === "9:16") coverW = w / 3;
       else coverW = w / 3;
       let coverH = coverW / aspect;
       if (coverH > h * 0.9) {
@@ -132,7 +129,7 @@ export default function App() {
       ctx.font = `bold ${fontSize}px Inter, Arial, sans-serif`;
       ctx.textBaseline = "top";
       ctx.textAlign = "right";
-      ctx.globalAlpha = 0.8;
+      ctx.globalAlpha = 0.6;
       ctx.fillStyle = "#fff";
       const markY = y + coverH + 4;
       ctx.fillText("@tinoreading", x + coverW, markY);
@@ -146,7 +143,6 @@ export default function App() {
     // eslint-disable-next-line
   }, [imgUrl, mainColor, selectedIdx]);
 
-  // Copy JPG to clipboard
   const handleCopy = async () => {
     if (!canvasUrl) return;
     try {
@@ -163,15 +159,13 @@ export default function App() {
     }
   };
 
-  // Compound ratio button logic
   const sliderWidth = 260;
   const highlightW = Math.floor(sliderWidth / 3) - 6;
 
   return (
     <div>
-      {/* HEADER */}
       <header className="header-bar">
-        <div className="brand">@tinoreading</div>
+        <img src={logo} alt="Tino Reading Logo" className="logo-img" />
         <div className="header-actions">
           <a className="shop-btn" href="https://tinoread.ing/" target="_blank" rel="noopener noreferrer">
             Shop English Books
@@ -184,9 +178,7 @@ export default function App() {
           </a>
         </div>
       </header>
-      {/* MAIN CONTENT */}
       <div className="center-container">
-        {/* 1. Upload & Paste */}
         <div className="actions-row">
           <button
             className="clipboard-btn"
@@ -209,11 +201,9 @@ export default function App() {
             <input id="upload-image" type="file" accept="image/*" onChange={handleImage} style={{ display: "none" }} />
           </label>
         </div>
-        {/* Filename */}
         <div className="filename-area">
           {imgFileName && <span className="filename-text">{imgFileName}</span>}
         </div>
-        {/* 2. Rendered Image */}
         <div
           className="result-panel"
           style={{
@@ -245,7 +235,6 @@ export default function App() {
             />
           </div>
         </div>
-        {/* 3. Ratio compound button */}
         <div className="ratio-slider" style={{ width: sliderWidth }}>
           {RATIOS.map((ratio, idx) => (
             <button
@@ -269,7 +258,6 @@ export default function App() {
             }}
           />
         </div>
-        {/* 4. Export buttons */}
         <div className="export-actions">
           <button
             className="copy-btn"
@@ -289,7 +277,6 @@ export default function App() {
         <div className="copy-msg">
           {copyMsg}
         </div>
-        {/* 5. Disclaimer */}
         <div className="disclaimer">
           This web app processes all images on your device. No image data is uploaded or saved.
         </div>
@@ -310,7 +297,11 @@ export default function App() {
           padding: 0 46px 0 36px;
           min-width: 0;
         }
-        .brand { font-weight: 700; font-size: 20px; letter-spacing: 0.6px; }
+        .logo-img {
+          height: 36px;
+          width: auto;
+          display: block;
+        }
         .header-actions { display: flex; align-items: center; gap: 20px; }
         .shop-btn {
           background: #fff;
@@ -448,6 +439,7 @@ export default function App() {
         .export-actions {
           margin-top: 18px;
           display: flex;
+          flex-direction: row;
           justify-content: center;
           width: 100%;
           gap: 12px;
