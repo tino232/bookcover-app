@@ -125,6 +125,7 @@ export default function App() {
       const x = (w - coverW) / 2;
       const y = (h - coverH) / 2 - 0.04 * h;
 
+      // 1. Draw shadow under rounded rect (no clip)
       ctx.save();
       const r = 5; // px radius
       ctx.beginPath();
@@ -143,6 +144,24 @@ export default function App() {
       ctx.shadowOffsetY = 4;
       ctx.fillStyle = "rgba(0,0,0,0.08)"; // almost invisible shadow
       ctx.fill();
+      ctx.restore();
+
+      // 2. Clip to rounded rect and draw image
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + coverW - r, y);
+      ctx.quadraticCurveTo(x + coverW, y, x + coverW, y + r);
+      ctx.lineTo(x + coverW, y + coverH - r);
+      ctx.quadraticCurveTo(x + coverW, y + coverH, x + coverW - r, y + coverH);
+      ctx.lineTo(x + r, y + coverH);
+      ctx.quadraticCurveTo(x, y + coverH, x, y + coverH - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+      ctx.clip();
+
+      ctx.drawImage(img, x, y, coverW, coverH);
       ctx.restore();
 
       // Watermark: always 2/3 of book cover width, 40% opacity, 5px margin top
