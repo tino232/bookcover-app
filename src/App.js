@@ -129,6 +129,22 @@ export default function App() {
       ctx.shadowColor = "rgba(0,0,0,0.18)";
       ctx.shadowBlur = 24;
       ctx.shadowOffsetY = 4;
+
+      // Clip to a rounded rectangle
+      const r = 5; // px radius
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + coverW - r, y);
+      ctx.quadraticCurveTo(x + coverW, y, x + coverW, y + r);
+      ctx.lineTo(x + coverW, y + coverH - r);
+      ctx.quadraticCurveTo(x + coverW, y + coverH, x + coverW - r, y + coverH);
+      ctx.lineTo(x + r, y + coverH);
+      ctx.quadraticCurveTo(x, y + coverH, x, y + coverH - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+      ctx.clip();
+
       ctx.drawImage(img, x, y, coverW, coverH);
       ctx.restore();
 
@@ -353,10 +369,12 @@ export default function App() {
         .shop-btn-text { display: none; }
         .shop-btn-icon { display: inline; }
         .shop-btn {
-          padding: 8px 14px; /* make button smaller on mobile */
-          min-width: 0;
-        }
-        }
+        min-width: 0;
+        background: none;
+        color: white;
+        padding: 0;
+        margin: 0;
+        }}
         .icon-link svg { color: #fff !important; }
         .center-container {
           display: flex;
