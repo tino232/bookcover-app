@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import logo from './assets/logo.png';
-import { Facebook, Instagram, CloudDownload } from "lucide-react";
+import { Facebook, Instagram, CloudDownload, ShoppingBag } from "lucide-react";
 
 const BRAND_COLOR = "#37BAC2";
 const RATIOS = [
@@ -178,9 +178,11 @@ export default function App() {
       <header className="header-bar">
         <img src={logo} alt="Tino Reading Logo" className="logo-img" />
         <div className="header-actions">
-          <a className="shop-btn" href="https://tinoread.ing/" target="_blank" rel="noopener noreferrer">
-            Shop English Books
-          </a>
+        <a className="shop-btn" href="https://tinoread.ing/" target="_blank" rel="noopener noreferrer">
+          <span className="shop-btn-text">Shop English Books</span>
+          <span className="shop-btn-icon"><ShoppingBag size={22} /></span>
+        </a>
+
           <a href="https://facebook.com/tinoreading" target="_blank" rel="noopener noreferrer" className="icon-link">
             <Facebook size={22} />
           </a>
@@ -344,6 +346,16 @@ export default function App() {
           margin-right: 6px;
           box-shadow: 0 2px 8px #abe9fa22;
           border: none;
+        }
+        .shop-btn-icon { display: none; }
+        .shop-btn-text { display: inline; }
+        @media (max-width: 700px) {
+        .shop-btn-text { display: none; }
+        .shop-btn-icon { display: inline; }
+        .shop-btn {
+          padding: 8px 14px; /* make button smaller on mobile */
+          min-width: 0;
+        }
         }
         .icon-link svg { color: #fff !important; }
         .center-container {
