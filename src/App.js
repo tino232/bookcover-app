@@ -100,7 +100,7 @@ export default function App() {
   // --- Canvas Render Logic ---
   const renderCanvas = () => {
     if (!imgUrl) return;
-    const { w, h, key } = RATIOS[selectedIdx];
+    const { w, h } = RATIOS[selectedIdx];
     const canvas = document.createElement("canvas");
     canvas.width = w;
     canvas.height = h;
