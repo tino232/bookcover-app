@@ -127,7 +127,7 @@ export default function App() {
 
       // 1. Draw shadow under rounded rect (no clip)
       ctx.save();
-      const r = 5; // px radius
+      const r = 20; // px radius
       ctx.beginPath();
       ctx.moveTo(x + r, y);
       ctx.lineTo(x + coverW - r, y);
