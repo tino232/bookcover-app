@@ -9,6 +9,10 @@ const RATIOS = [
   { key: "9:16", label: "9:16", w: 1152, h: 2048 },
 ];
 
+// --- Constants for easy tweak ---
+const EXPORT_CANVAS_SIZE = 340; // px, desktop default (was 290)
+const EXPORT_CANVAS_SIZE_MOBILE = 300; // px, mobile max
+
 function getDominantColor(img) {
   const canvas = document.createElement("canvas");
   canvas.width = img.width;
@@ -32,19 +36,26 @@ export default function App() {
   const [copyMsg, setCopyMsg] = useState("");
   const [pasteLoading, setPasteLoading] = useState(false);
   const imgRef = useRef();
-  const [imageAreaHeight, setImageAreaHeight] = useState(420);
-  const exportCanvasSize = 400; // px, for better visual
+  const [canvasBoxHeight, setCanvasBoxHeight] = useState(EXPORT_CANVAS_SIZE);
 
+  // Adjust height for viewport, so all fits, with larger export canvas
   useEffect(() => {
     function adjustHeight() {
       const headerH = 62;
-      const bodyH = window.innerHeight - headerH;
-      const blockH = 32 + 36 + 23 + exportCanvasSize + 42 + 54 + 13 + 34 + 26; // all elements, plus paddings/gaps
-      setImageAreaHeight(Math.max(exportCanvasSize, Math.min(blockH, bodyH)));
+      const actionsH = 48;
+      const ratioH = 54;
+      const exportH = 54;
+      const msgH = copyMsg ? 22 : 0;
+      const disclaimerH = 34;
+      const gapSum = 24 + 16 + 20; // less margin/padding between blocks
+      const fileH = imgFileName && imgFileName !== "clipboard-image.png" ? 23 : 0;
+      let max = window.innerHeight - headerH - actionsH - fileH - ratioH - exportH - msgH - disclaimerH - gapSum;
+      setCanvasBoxHeight(Math.max(180, Math.min(EXPORT_CANVAS_SIZE, max)));
     }
     adjustHeight();
     window.addEventListener("resize", adjustHeight);
     return () => window.removeEventListener("resize", adjustHeight);
+    // eslint-disable-next-line
   }, [imgFileName, copyMsg]);
 
   const handleImage = (e) => {
@@ -59,7 +70,6 @@ export default function App() {
     img.onload = () => setMainColor(getDominantColor(img));
   };
 
-  // Clipboard API supports getType().name for name fallback
   const handlePasteClipboard = async () => {
     setPasteLoading(true);
     setCopyMsg("");
@@ -69,15 +79,9 @@ export default function App() {
         for (const type of item.types) {
           if (type.startsWith("image/")) {
             const blob = await item.getType(type);
-            let fileName = blob.name || "clipboard-image.png";
-            // Try to get filename from webkitRelativePath if available
-            if (blob && blob.type && blob.lastModified) {
-              const ext = blob.type.split("/").pop();
-              fileName = `clipboard-${blob.lastModified}.${ext}`;
-            }
-            setImgFileName(fileName);
             const url = URL.createObjectURL(blob);
             setImgUrl(url);
+            setImgFileName(""); // <--- Don't show clipboard-image.png
             const img = new window.Image();
             img.src = url;
             img.onload = () => setMainColor(getDominantColor(img));
@@ -93,7 +97,7 @@ export default function App() {
     setPasteLoading(false);
   };
 
-  // Watermark/gradient logic per requirements
+  // --- Canvas Render Logic ---
   const renderCanvas = () => {
     if (!imgUrl) return;
     const { w, h, key } = RATIOS[selectedIdx];
@@ -101,22 +105,18 @@ export default function App() {
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext("2d");
-    // SMOOTH, MODERN GRADIENT
     const grad = ctx.createLinearGradient(0, 0, w, h);
-    grad.addColorStop(0, BRAND_COLOR);      // 0%
-    grad.addColorStop(0.4, BRAND_COLOR);    // 40%
-    grad.addColorStop(0.62, mainColor);     // 62% blend start
-    grad.addColorStop(1, mainColor);        // 100%
+    grad.addColorStop(0, BRAND_COLOR);
+    grad.addColorStop(1, mainColor || "#fff");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
 
     const img = imgRef.current;
     if (img) {
       const aspect = img.naturalWidth / img.naturalHeight;
-      // COVER size
       let coverW;
-      if (key === "9:16") coverW = w / 3;
-      else coverW = w / 3;
+      // In ALL ratios, book cover is 1/3 of width (per latest request)
+      coverW = w / 3;
       let coverH = coverW / aspect;
       if (coverH > h * 0.9) {
         coverH = h * 0.9;
@@ -124,31 +124,25 @@ export default function App() {
       }
       const x = (w - coverW) / 2;
       const y = (h - coverH) / 2 - 0.04 * h;
+
       ctx.save();
       ctx.shadowColor = "rgba(55,186,194,0.08)";
       ctx.shadowBlur = 28;
       ctx.drawImage(img, x, y, coverW, coverH);
       ctx.restore();
-      // Watermark 2/3 width of book cover
+
+      // Watermark: always 2/3 of book cover width, 40% opacity, 5px margin top
       ctx.save();
-      const watermarkWidth = (coverW * 2) / 3;
-      let fontSize = Math.round(h * 0.045 * 0.8);
+      const watermarkW = coverW * (2 / 3);
+      let fontSize = watermarkW / 8;
+      fontSize = Math.max(16, Math.min(fontSize, 48));
       ctx.font = `bold ${fontSize}px Inter, Arial, sans-serif`;
-      // adjust font size down if text wider than target
-      let txt = "@tinoreading";
-      while (
-        ctx.measureText(txt).width > watermarkWidth &&
-        fontSize > 8
-      ) {
-        fontSize -= 1;
-        ctx.font = `bold ${fontSize}px Inter, Arial, sans-serif`;
-      }
       ctx.textBaseline = "top";
       ctx.textAlign = "right";
       ctx.globalAlpha = 0.4;
       ctx.fillStyle = "#fff";
-      const markY = y + coverH + 4;
-      ctx.fillText(txt, x + coverW, markY);
+      const markY = y + coverH + 5;
+      ctx.fillText("@tinoreading", x + coverW, markY, watermarkW);
       ctx.restore();
     }
     setCanvasUrl(canvas.toDataURL("image/jpeg", 1.0));
@@ -175,8 +169,8 @@ export default function App() {
     }
   };
 
-  const sliderWidth = 340;
-  const highlightW = Math.floor(sliderWidth / 3) - 8;
+  const sliderWidth = 260;
+  const highlightW = Math.floor(sliderWidth / 3) - 6;
 
   return (
     <div>
@@ -218,20 +212,27 @@ export default function App() {
           </label>
         </div>
         <div className="filename-area">
-          {imgFileName && <span className="filename-text">{imgFileName}</span>}
+          {imgFileName && imgFileName !== "clipboard-image.png" && (
+            <span className="filename-text">{imgFileName}</span>
+          )}
         </div>
         <div
           className="result-panel"
           style={{
-            minHeight: imageAreaHeight,
-            maxHeight: imageAreaHeight,
+            minHeight: canvasBoxHeight,
+            maxHeight: canvasBoxHeight,
             transition: "max-height 0.32s cubic-bezier(.7,.4,0,1)",
           }}
         >
-          <div className="export-canvas sharp-corner" style={{
-            width: exportCanvasSize,
-            height: exportCanvasSize,
-          }}>
+          <div
+            className="export-canvas sharp-corner"
+            style={{
+              width: canvasBoxHeight,
+              height: canvasBoxHeight,
+              maxWidth: "100vw",
+              maxHeight: "100vw"
+            }}
+          >
             {canvasUrl ?
               <img
                 src={canvasUrl}
@@ -254,7 +255,7 @@ export default function App() {
             />
           </div>
         </div>
-        <div className="block ratio-slider" style={{ width: sliderWidth }}>
+        <div className="ratio-slider" style={{ width: sliderWidth, marginTop: 16 }}>
           {RATIOS.map((ratio, idx) => (
             <button
               key={ratio.key}
@@ -271,13 +272,13 @@ export default function App() {
           <div
             className="slider-highlight"
             style={{
-              left: `calc(${selectedIdx * 33.3333}% + 4px)`,
+              left: `calc(${selectedIdx * 33.3333}% + 3px)`,
               width: highlightW,
               transition: "left 0.32s cubic-bezier(.7,.4,0,1)"
             }}
           />
         </div>
-        <div className="block export-actions">
+        <div className="export-actions">
           <button
             className="copy-btn"
             onClick={handleCopy}
@@ -293,10 +294,10 @@ export default function App() {
             </a>
           }
         </div>
-        <div className="block copy-msg">
+        <div className="copy-msg">
           {copyMsg}
         </div>
-        <div className="block disclaimer">
+        <div className="disclaimer">
           This web app processes all images on your device. No image data is uploaded or saved.
         </div>
       </div>
@@ -347,11 +348,10 @@ export default function App() {
           padding-left: 0;
           padding-right: 0;
         }
-        .block { width: 100%; display: flex; flex-direction: column; align-items: center; }
         .actions-row {
           display: flex;
           gap: 16px;
-          margin-top: 32px;
+          margin-top: 24px;
           margin-bottom: 0;
           width: 100%;
           justify-content: center;
@@ -388,7 +388,7 @@ export default function App() {
           display: flex;
           flex-direction: column;
           align-items: center;
-          margin-top: 12px;
+          margin-top: 10px;
           margin-bottom: 0;
         }
         .export-canvas {
@@ -400,7 +400,6 @@ export default function App() {
           position: relative;
           box-shadow: 0 1.5px 12px #54cfe915;
           border-radius: 0 !important;
-          /* size handled inline */
         }
         .sharp-corner { border-radius: 0 !important; }
         .canvas-img {
@@ -418,8 +417,9 @@ export default function App() {
         }
         .ratio-slider {
           position: relative;
-          margin-top: 12px;
-          margin-bottom: 0;
+          margin-top: 16px;
+          width: 260px;
+          height: 42px;
           background: #f2fafd;
           border-radius: 16px;
           display: flex;
@@ -455,7 +455,7 @@ export default function App() {
           transition: left 0.38s cubic-bezier(.77,.22,.31,1.08), background 0.19s;
         }
         .export-actions {
-          margin-top: 12px;
+          margin-top: 16px;
           display: flex;
           flex-direction: row;
           justify-content: center;
@@ -500,7 +500,7 @@ export default function App() {
           margin-top: 6px;
         }
         .disclaimer {
-          margin: 18px auto 16px;
+          margin: 28px auto 16px;
           font-size: 13px;
           color: #b6bbc1;
           text-align: center;
@@ -511,8 +511,8 @@ export default function App() {
             min-width: 0;
             padding: 0 20px;
           }
-          .export-canvas { width: 95vw !important; height: 95vw !important; max-width: 400px; max-height: 400px;}
-          .ratio-slider { width: 98vw; max-width: 340px;}
+          .export-canvas { width: ${EXPORT_CANVAS_SIZE_MOBILE}px !important; height: ${EXPORT_CANVAS_SIZE_MOBILE}px !important; max-width: 99vw; max-height: 99vw;}
+          .ratio-slider { width: 96vw; max-width: 270px;}
           .header-bar { padding: 0 5vw 0 4vw; }
         }
       `}</style>
