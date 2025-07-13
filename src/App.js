@@ -1,521 +1,249 @@
-import React, { useRef, useState, useEffect } from "react";
-import logo from './assets/logo.png';
-import { Facebook, Instagram, CloudDownload } from "lucide-react";
+// src/App.js
+import React, { useRef, useState } from "react";
+import { Download, Clipboard, Upload, Instagram, Facebook } from "lucide-react";
+import logo from "./assets/logo.png";
 
-const BRAND_COLOR = "#37BAC2";
+// Ratio configs
 const RATIOS = [
-  { key: "1:1", label: "1:1", w: 2048, h: 2048 },
-  { key: "4:5", label: "4:5", w: 1638, h: 2048 },
-  { key: "9:16", label: "9:16", w: 1152, h: 2048 },
+  { label: "1:1", w: 2048, h: 2048 },
+  { label: "4:5", w: 1638, h: 2048 },
+  { label: "9:16", w: 1152, h: 2048 }
 ];
 
-// --- Constants for easy tweak ---
-const EXPORT_CANVAS_SIZE = 340; // px, desktop default (was 290)
-const EXPORT_CANVAS_SIZE_MOBILE = 300; // px, mobile max
-
-function getDominantColor(img) {
-  const canvas = document.createElement("canvas");
-  canvas.width = img.width;
-  canvas.height = img.height;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(img, 0, 0);
-  const { data } = ctx.getImageData(0, 0, img.width, img.height);
-  let r = 0, g = 0, b = 0, count = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    r += data[i]; g += data[i + 1]; b += data[i + 2]; count++;
-  }
-  return `rgb(${Math.round(r / count)},${Math.round(g / count)},${Math.round(b / count)})`;
+function getTodayString() {
+  const d = new Date();
+  const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return m[d.getMonth()] + d.getDate();
 }
 
-export default function App() {
-  const [imgUrl, setImgUrl] = useState("");
-  const [imgFileName, setImgFileName] = useState("");
-  const [mainColor, setMainColor] = useState(BRAND_COLOR);
+function App() {
+  const [imgUrl, setImgUrl] = useState(null);
+  const [fileName, setFileName] = useState("");
   const [selectedIdx, setSelectedIdx] = useState(0);
-  const [canvasUrl, setCanvasUrl] = useState("");
-  const [copyMsg, setCopyMsg] = useState("");
-  const [pasteLoading, setPasteLoading] = useState(false);
-  const imgRef = useRef();
-  const [canvasBoxHeight, setCanvasBoxHeight] = useState(EXPORT_CANVAS_SIZE);
+  const [copied, setCopied] = useState(false);
+  const fileInput = useRef();
 
-  // Adjust height for viewport, so all fits, with larger export canvas
-  useEffect(() => {
-    function adjustHeight() {
-      const headerH = 62;
-      const actionsH = 48;
-      const ratioH = 54;
-      const exportH = 54;
-      const msgH = copyMsg ? 22 : 0;
-      const disclaimerH = 34;
-      const gapSum = 24 + 16 + 20; // less margin/padding between blocks
-      const fileH = imgFileName && imgFileName !== "clipboard-image.png" ? 23 : 0;
-      let max = window.innerHeight - headerH - actionsH - fileH - ratioH - exportH - msgH - disclaimerH - gapSum;
-      setCanvasBoxHeight(Math.max(180, Math.min(EXPORT_CANVAS_SIZE, max)));
-    }
-    adjustHeight();
-    window.addEventListener("resize", adjustHeight);
-    return () => window.removeEventListener("resize", adjustHeight);
-    // eslint-disable-next-line
-  }, [imgFileName, copyMsg]);
-
-  const handleImage = (e) => {
-    setCopyMsg("");
-    const file = e.target.files[0];
+  // Handle image upload/paste
+  function onUpload(e, pastedFile) {
+    const file = pastedFile || e.target.files[0];
     if (!file) return;
-    setImgFileName(file.name);
-    const url = URL.createObjectURL(file);
-    setImgUrl(url);
-    const img = new window.Image();
-    img.src = url;
-    img.onload = () => setMainColor(getDominantColor(img));
-  };
-
-  const handlePasteClipboard = async () => {
-    setPasteLoading(true);
-    setCopyMsg("");
-    try {
-      const items = await navigator.clipboard.read();
-      for (const item of items) {
-        for (const type of item.types) {
-          if (type.startsWith("image/")) {
-            const blob = await item.getType(type);
-            const url = URL.createObjectURL(blob);
-            setImgUrl(url);
-            setImgFileName(""); // <--- Don't show clipboard-image.png
-            const img = new window.Image();
-            img.src = url;
-            img.onload = () => setMainColor(getDominantColor(img));
-            setPasteLoading(false);
-            return;
-          }
-        }
+    setFileName(file.name.match(/clipboard/i) ? "" : file.name); // Hide clipboard-image.png
+    const reader = new FileReader();
+    reader.onload = (ev) => setImgUrl(ev.target.result);
+    reader.readAsDataURL(file);
+  }
+  function onPaste(e) {
+    const items = e.clipboardData.items;
+    for (let item of items) {
+      if (item.type.indexOf("image") === 0) {
+        onUpload(null, item.getAsFile());
+        return;
       }
-      setCopyMsg("No image in clipboard.");
-    } catch {
-      setCopyMsg("Clipboard image not supported.");
     }
-    setPasteLoading(false);
-  };
+  }
 
-  // --- Canvas Render Logic ---
-  const renderCanvas = () => {
-    if (!imgUrl) return;
+  // Canvas logic
+  function renderCanvasUrl() {
+    if (!imgUrl) return "";
     const { w, h } = RATIOS[selectedIdx];
     const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
+    canvas.width = w; canvas.height = h;
     const ctx = canvas.getContext("2d");
+
+    // Gradient background (brand + dominant color as fallback)
     const grad = ctx.createLinearGradient(0, 0, w, h);
-    grad.addColorStop(0, BRAND_COLOR);
-    grad.addColorStop(1, mainColor || "#fff");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, w, h);
+    grad.addColorStop(0, "#37bac2");
+    grad.addColorStop(1, "#d98c49"); // fallback: orange
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
 
-    const img = imgRef.current;
-    if (img) {
-      const aspect = img.naturalWidth / img.naturalHeight;
-      let coverW;
-      // In ALL ratios, book cover is 1/3 of width (per latest request)
-      coverW = w / 3;
-      let coverH = coverW / aspect;
-      if (coverH > h * 0.9) {
-        coverH = h * 0.9;
-        coverW = coverH * aspect;
-      }
-      const x = (w - coverW) / 2;
-      const y = (h - coverH) / 2 - 0.04 * h;
+    // Book cover sizing
+    let coverW = w / (selectedIdx === 2 ? 3 : 3); // 1/3 for all, including 9:16 as requested
+    let coverH = coverW;
+    let ratioImg = new window.Image();
+    ratioImg.src = imgUrl;
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.10)";
+    ctx.shadowBlur = 32;
+    ctx.shadowOffsetY = 14;
+    // Position in center
+    const x = (w - coverW) / 2;
+    const y = (h - coverH) / 2 - 24;
+    ctx.drawImage(ratioImg, x, y, coverW, coverH);
+    ctx.restore();
 
-      ctx.save();
-      ctx.shadowColor = "rgba(55,186,194,0.08)";
-      ctx.shadowBlur = 28;
-      ctx.drawImage(img, x, y, coverW, coverH);
-      ctx.restore();
+    // Watermark under book cover (2/3 width of book cover)
+    ctx.globalAlpha = 0.4;
+    ctx.font = `bold ${Math.floor(coverW * 2 / 3 * 0.18)}px Inter,sans-serif`;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "right";
+    ctx.fillText(
+      "@tinoreading",
+      x + coverW,
+      y + coverH + 8 + Math.floor(coverW * 2 / 3 * 0.18)
+    );
+    ctx.globalAlpha = 1;
 
-      // Watermark: always 2/3 of book cover width, 40% opacity, 5px margin top
-      ctx.save();
-      const watermarkW = coverW * (2 / 3);
-      let fontSize = watermarkW / 8;
-      fontSize = Math.max(16, Math.min(fontSize, 48));
-      ctx.font = `bold ${fontSize}px Inter, Arial, sans-serif`;
-      ctx.textBaseline = "top";
-      ctx.textAlign = "right";
-      ctx.globalAlpha = 0.4;
-      ctx.fillStyle = "#fff";
-      const markY = y + coverH + 5;
-      ctx.fillText("@tinoreading", x + coverW, markY, watermarkW);
-      ctx.restore();
-    }
-    setCanvasUrl(canvas.toDataURL("image/jpeg", 1.0));
-  };
+    return canvas.toDataURL("image/jpeg", 1.0);
+  }
+  const exportUrl = imgUrl ? renderCanvasUrl() : "";
 
-  useEffect(() => {
-    if (imgUrl) renderCanvas();
-    // eslint-disable-next-line
-  }, [imgUrl, mainColor, selectedIdx]);
-
-  const handleCopy = async () => {
-    if (!canvasUrl) return;
-    try {
-      const res = await fetch(canvasUrl);
-      const blob = await res.blob();
-      await navigator.clipboard.write([
-        new window.ClipboardItem({ [blob.type]: blob }),
-      ]);
-      setCopyMsg("Copied image!");
-      setTimeout(() => setCopyMsg(""), 1200);
-    } catch {
-      setCopyMsg("Copy failed.");
-      setTimeout(() => setCopyMsg(""), 1500);
-    }
-  };
-
-  const sliderWidth = 260;
-  const highlightW = Math.floor(sliderWidth / 3) - 6;
+  // Download
+  function handleDownload() {
+    if (!exportUrl) return;
+    const name = `TINOReading_YourSocialBook_${getTodayString()}.jpg`;
+    const a = document.createElement("a");
+    a.href = exportUrl;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+  // Copy
+  async function handleCopy() {
+    if (!exportUrl) return;
+    const blob = await (await fetch(exportUrl)).blob();
+    await navigator.clipboard.write([
+      new window.ClipboardItem({ "image/jpeg": blob })
+    ]);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1200);
+  }
 
   return (
-    <div>
-      <header className="header-bar">
-        <img src={logo} alt="Tino Reading Logo" className="logo-img" />
+    <div className="main-app" onPaste={onPaste}>
+      {/* Header */}
+      <header className="header">
+        <img src={logo} alt="TINOReading" className="header-logo" />
         <div className="header-actions">
-          <a className="shop-btn" href="https://tinoread.ing/" target="_blank" rel="noopener noreferrer">
+          <a className="header-btn" href="https://tinoread.ing/" target="_blank" rel="noopener noreferrer">
             Shop English Books
           </a>
-          <a href="https://facebook.com/tinoreading" target="_blank" rel="noopener noreferrer" className="icon-link">
-            <Facebook size={22} />
+          <a href="https://facebook.com/tinoreading" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+            <Facebook strokeWidth={2} size={28} />
           </a>
-          <a href="https://instagram.com/tinoreading" target="_blank" rel="noopener noreferrer" className="icon-link">
-            <Instagram size={22} />
+          <a href="https://instagram.com/tinoreading" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+            <Instagram strokeWidth={2} size={28} />
           </a>
         </div>
       </header>
-      <div className="center-container">
-        <div className="actions-row">
+
+      <main className="centerbox">
+        {/* Controls */}
+        <div className="upload-row">
           <button
-            className="clipboard-btn"
-            onClick={handlePasteClipboard}
-            disabled={pasteLoading}
+            className="upload-btn"
+            onClick={() => fileInput.current.click()}
           >
-            {pasteLoading ?
-              <span className="btn-spinner">⏳</span> :
-              <span className="btn-icon">
-                <svg width="19" height="19" fill="none" stroke="#2ea9b6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></svg>
-              </span>
-            }
-            <span>Paste from clipboard</span>
+            <Upload size={18} style={{marginRight:8}}/> Upload image
           </button>
-          <label htmlFor="upload-image" className="upload-btn">
-            <span className="btn-icon">
-              <svg width="19" height="19" fill="none" stroke="#2ea9b6" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-            </span>
-            <span>Upload image</span>
-            <input id="upload-image" type="file" accept="image/*" onChange={handleImage} style={{ display: "none" }} />
-          </label>
+          <input
+            type="file"
+            accept="image/*"
+            style={{display:"none"}}
+            ref={fileInput}
+            onChange={onUpload}
+          />
+          <button className="upload-btn" onClick={() => navigator.clipboard.read().then(()=>{})}>
+            <Clipboard size={18} style={{marginRight:8}}/> Paste from clipboard
+          </button>
         </div>
-        <div className="filename-area">
-          {imgFileName && imgFileName !== "clipboard-image.png" && (
-            <span className="filename-text">{imgFileName}</span>
+        {!!fileName && (
+          <div className="filename">{fileName}</div>
+        )}
+
+        {/* Ratio selector */}
+        <div className="ratio-slider">
+          {RATIOS.map((r, idx) => (
+            <button
+              key={r.label}
+              className={`ratio-btn${selectedIdx===idx?" selected":""}`}
+              onClick={()=>setSelectedIdx(idx)}
+            >{r.label}</button>
+          ))}
+        </div>
+
+        {/* Rendered Canvas */}
+        <div className="export-canvasbox">
+          {imgUrl ? (
+            <img
+              src={exportUrl}
+              className="export-canvas"
+              style={{width:"350px",height:"auto"}}
+              alt="export preview"
+            />
+          ) : (
+            <div className="canvas-placeholder">Preview will appear here</div>
           )}
         </div>
-        <div
-          className="result-panel"
-          style={{
-            minHeight: canvasBoxHeight,
-            maxHeight: canvasBoxHeight,
-            transition: "max-height 0.32s cubic-bezier(.7,.4,0,1)",
-          }}
-        >
-          <div
-            className="export-canvas sharp-corner"
-            style={{
-              width: canvasBoxHeight,
-              height: canvasBoxHeight,
-              maxWidth: "100vw",
-              maxHeight: "100vw"
-            }}
-          >
-            {canvasUrl ?
-              <img
-                src={canvasUrl}
-                alt="result"
-                className="canvas-img"
-                crossOrigin="anonymous"
-                style={{ transition: "opacity 0.32s" }}
-              /> :
-              <span className="preview-placeholder">
-                Export preview
-              </span>
-            }
-            <img
-              ref={imgRef}
-              src={imgUrl}
-              alt=""
-              className="hidden-img"
-              crossOrigin="anonymous"
-              onLoad={renderCanvas}
-            />
-          </div>
+
+        {/* Actions */}
+        <div className="export-row">
+          <button className="export-btn" onClick={handleCopy}>{copied ? "Copied!" : "Copy"}</button>
+          <button className="export-btn" onClick={handleDownload}><Download size={18} style={{marginRight:8}}/>Download</button>
         </div>
-        <div className="ratio-slider" style={{ width: sliderWidth, marginTop: 16 }}>
-          {RATIOS.map((ratio, idx) => (
-            <button
-              key={ratio.key}
-              className={
-                "slider-segment" + (selectedIdx === idx ? " selected" : "")
-              }
-              onClick={() => setSelectedIdx(idx)}
-              tabIndex={0}
-              style={{ zIndex: selectedIdx === idx ? 2 : 1 }}
-            >
-              {ratio.label}
-            </button>
-          ))}
-          <div
-            className="slider-highlight"
-            style={{
-              left: `calc(${selectedIdx * 33.3333}% + 3px)`,
-              width: highlightW,
-              transition: "left 0.32s cubic-bezier(.7,.4,0,1)"
-            }}
-          />
-        </div>
-        <div className="export-actions">
-          <button
-            className="copy-btn"
-            onClick={handleCopy}
-            title="Copy image"
-          >
-            Copy
-          </button>
-          {canvasUrl &&
-            <a href={canvasUrl} download="bookcover-export.jpg" className="download-link">
-              <button className="download-btn" title="Download image">
-                <CloudDownload size={19} />
-              </button>
-            </a>
-          }
-        </div>
-        <div className="copy-msg">
-          {copyMsg}
-        </div>
+
+        {/* Disclaimer */}
         <div className="disclaimer">
-          This web app processes all images on your device. No image data is uploaded or saved.
+          This web app is designed by Tino Bookstore. No image data is uploaded or stored; all processing happens locally in your browser.
         </div>
-      </div>
+      </main>
+      {/* Style */}
       <style>{`
-        html, body {
-          background: #fff;
-          margin: 0;
-          padding: 0;
-        }
-        .header-bar {
-          background: ${BRAND_COLOR};
-          color: #fff;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          height: 62px;
-          padding: 0 46px 0 36px;
-          min-width: 0;
-        }
-        .logo-img {
-          height: 36px;
-          width: auto;
-          display: block;
-        }
-        .header-actions { display: flex; align-items: center; gap: 20px; }
-        .shop-btn {
-          background: #fff;
-          border-radius: 20px;
-          font-weight: 700;
-          color: ${BRAND_COLOR};
-          padding: 8px 22px;
-          font-size: 16px;
-          text-decoration: none;
-          margin-right: 6px;
-          box-shadow: 0 2px 8px #abe9fa22;
-          border: none;
-        }
-        .icon-link svg { color: #fff !important; }
-        .center-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          margin: 0 auto;
-          width: 100%;
-          max-width: 650px;
-          min-height: calc(100vh - 62px);
-          box-sizing: border-box;
-          padding-left: 0;
-          padding-right: 0;
-        }
-        .actions-row {
-          display: flex;
-          gap: 16px;
-          margin-top: 24px;
-          margin-bottom: 0;
-          width: 100%;
-          justify-content: center;
-        }
-        .clipboard-btn, .upload-btn {
-          width: 170px;
-          height: 36px;
-          border-radius: 13px;
-          font-weight: 500;
-          font-size: 13px;
-          margin: 0;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          border: 1.5px solid #d8e5eb;
-          background: #f7fafd;
-          color: #2ea9b6;
-          cursor: pointer;
-          justify-content: center;
-          transition: background 0.15s;
-        }
-        .clipboard-btn:disabled { cursor: wait; opacity: 0.72; }
-        .filename-area { height: 23px; display: flex; align-items: center; justify-content: center; }
-        .filename-text {
-          font-size: 13.2px;
-          color: #93a3ad;
-          font-weight: 500;
-          text-align: center;
-          animation: fadeInFile 0.44s;
-        }
-        @keyframes fadeInFile { from { opacity:0; transform:translateY(-10px);} to {opacity:1; transform:none;} }
-        .result-panel {
-          width: 100%;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          margin-top: 10px;
-          margin-bottom: 0;
-        }
-        .export-canvas {
-          background: #fff;
-          margin: 0 auto;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          position: relative;
-          box-shadow: 0 1.5px 12px #54cfe915;
-          border-radius: 0 !important;
-        }
-        .sharp-corner { border-radius: 0 !important; }
-        .canvas-img {
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
-          border-radius: 0 !important;
-          background: #fff;
-        }
-        .hidden-img { display: none; }
-        .preview-placeholder {
-          color: #b9babd;
-          font-size: 19px;
-          font-weight: 500;
-        }
-        .ratio-slider {
-          position: relative;
-          margin-top: 16px;
-          width: 260px;
-          height: 42px;
-          background: #f2fafd;
-          border-radius: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          box-shadow: 0 2px 10px #c7fcf62d;
-        }
-        .slider-segment {
-          flex: 1 1 33.33%;
-          background: none;
-          border: none;
-          outline: none;
-          color: #38b9c2;
-          font-weight: 700;
-          font-size: 14px;
-          padding: 8px 0;
-          z-index: 2;
-          cursor: pointer;
-          position: relative;
-          transition: color 0.22s;
-        }
-        .slider-segment.selected {
-          color: #fff;
-        }
-        .slider-highlight {
-          position: absolute;
-          top: 3px;
-          height: 36px;
-          border-radius: 14px;
-          background: ${BRAND_COLOR};
-          z-index: 1;
-          box-shadow: 0 2px 10px #b0f6fe44;
-          transition: left 0.38s cubic-bezier(.77,.22,.31,1.08), background 0.19s;
-        }
-        .export-actions {
-          margin-top: 16px;
-          display: flex;
-          flex-direction: row;
-          justify-content: center;
-          width: 100%;
-          gap: 12px;
-        }
-        .copy-btn {
-          background: ${BRAND_COLOR};
-          color: #fff;
-          border: none;
-          border-radius: 12px;
-          padding: 8px 26px;
-          font-weight: 700;
-          font-size: 15px;
-          letter-spacing: 0.15px;
-          display: flex;
-          align-items: center;
-          cursor: pointer;
-          box-shadow: 0 2px 8px #abe9fa22;
-          transition: background 0.2s;
-        }
-        .download-link { margin-left: 7px; }
-        .download-btn {
-          background: #fff;
-          border-radius: 12px;
-          color: ${BRAND_COLOR};
-          border: 1.3px solid #c3e8eb;
-          padding: 8px 11px 7px 11px;
-          font-weight: 700;
-          font-size: 15px;
-          display: flex;
-          align-items: center;
-          cursor: pointer;
-          box-shadow: 0 2px 8px #abe9fa22;
-        }
-        .copy-msg {
-          text-align: center;
-          font-size: 13.5px;
-          font-weight: 500;
-          color: #29b8b3;
-          min-height: 22px;
-          margin-top: 6px;
-        }
-        .disclaimer {
-          margin: 28px auto 16px;
-          font-size: 13px;
-          color: #b6bbc1;
-          text-align: center;
-        }
-        @media (max-width: 700px) {
-          .center-container {
-            max-width: 100vw;
-            min-width: 0;
-            padding: 0 20px;
-          }
-          .export-canvas { width: ${EXPORT_CANVAS_SIZE_MOBILE}px !important; height: ${EXPORT_CANVAS_SIZE_MOBILE}px !important; max-width: 99vw; max-height: 99vw;}
-          .ratio-slider { width: 96vw; max-width: 270px;}
-          .header-bar { padding: 0 5vw 0 4vw; }
-        }
-      `}</style>
+      body { margin:0; background:#fff; font-family:Inter,Helvetica,Arial,sans-serif;}
+      .main-app { min-height:100vh; background:#fff;}
+      .header {
+        width:100vw; height:64px; background:#37bac2; color:#fff; display:flex; align-items:center; justify-content:center; gap:24px;
+      }
+      .header-logo { height:38px; margin-right:auto; margin-left:24px;}
+      .header-actions { display:flex; gap:14px; align-items:center;}
+      .header-btn { background:#fff; color:#37bac2; border:none; border-radius:20px; font-weight:600; padding:9px 22px; font-size:16px; cursor:pointer; transition:.2s;}
+      .header-btn:hover { background:#e7fbfd;}
+      .centerbox {
+        width:100%; max-width:650px; margin:0 auto;
+        display:flex; flex-direction:column; align-items:center; justify-content:center;
+        min-height:calc(100vh - 64px); padding:0 20px 20px 20px; box-sizing:border-box;
+      }
+      .upload-row { display:flex; gap:18px; width:100%; margin:48px 0 0 0; justify-content:center;}
+      .upload-btn {
+        display:flex; align-items:center; background:#e7fbfd; color:#37bac2; border:2px dashed #37bac2; border-radius:18px;
+        padding:13px 26px; font-size:16px; font-weight:500; cursor:pointer; transition:.18s;
+      }
+      .upload-btn:hover { background:#bff0fa;}
+      .filename { margin-top:9px; color:#888; font-size:15px; text-align:center;}
+      .ratio-slider { display:flex; gap:9px; margin:30px 0 12px 0;}
+      .ratio-btn {
+        padding:8px 26px; background:#fff; border:1.8px solid #bfe9ee; border-radius:16px;
+        font-weight:600; color:#37bac2; font-size:16px; cursor:pointer; transition:.14s;
+      }
+      .ratio-btn.selected, .ratio-btn:hover { background:#37bac2; color:#fff; border-color:#37bac2; }
+      .export-canvasbox { width:100%; display:flex; justify-content:center; align-items:center; margin:0 0 12px 0;}
+      .export-canvas {
+        box-shadow: 0 12px 28px 0 rgba(0,0,0,0.10), 0 1.5px 12px 0 rgba(0,0,0,0.07);
+        border-radius:0; display:block;
+        background:#fff;
+        transition: box-shadow 0.3s;
+      }
+      .canvas-placeholder {
+        width:350px; height:350px; display:flex; align-items:center; justify-content:center; background:#f2f2f2;
+        color:#bbb; font-size:20px; border-radius:0; font-weight:500;
+      }
+      .export-row { display:flex; gap:14px; margin:20px 0 0 0;}
+      .export-btn {
+        background:#37bac2; color:#fff; font-weight:600; font-size:17px; padding:12px 32px; border:none;
+        border-radius:16px; cursor:pointer; display:flex; align-items:center; transition:.16s;
+      }
+      .export-btn:hover { background:#25a1aa;}
+      .disclaimer { margin:38px auto 0 auto; color:#bbb; font-size:15px; text-align:center;}
+      @media (max-width:700px) {
+        .centerbox { max-width:100vw; padding:0 12px;}
+        .export-canvasbox, .canvas-placeholder { width:100%;}
+        .export-canvas, .canvas-placeholder { max-width:98vw; height:auto;}
+        .upload-row { flex-direction:column; gap:13px;}
+        .header-logo { margin-left:7px;}
+      }
+      `}
+      </style>
     </div>
   );
 }
+export default App;
