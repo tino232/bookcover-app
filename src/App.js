@@ -559,7 +559,7 @@ export default function App() {
         }
         @media (max-width: 700px) {
           .center-container {
-            max-width: 90vw;
+            min-height: calc(90vh - 62px) !important;
             min-width: 0;
             padding: 0 20px;
             min-height: 0 !important;
