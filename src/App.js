@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Facebook, Instagram, CloudDownload } from "lucide-react";
 
 const BRAND_COLOR = "#37BAC2";
@@ -8,7 +8,6 @@ const RATIOS = [
   { key: "9:16", label: "9:16", w: 1152, h: 2048 },
 ];
 
-// Helper: get dominant color
 function getDominantColor(img) {
   const canvas = document.createElement("canvas");
   canvas.width = img.width;
@@ -23,15 +22,38 @@ function getDominantColor(img) {
   return `rgb(${Math.round(r / count)},${Math.round(g / count)},${Math.round(b / count)})`;
 }
 
-function App() {
+export default function App() {
   const [imgUrl, setImgUrl] = useState("");
   const [imgFileName, setImgFileName] = useState("");
   const [mainColor, setMainColor] = useState(BRAND_COLOR);
-  const [selectedRatio, setSelectedRatio] = useState(RATIOS[0]);
+  const [selectedIdx, setSelectedIdx] = useState(0);
   const [canvasUrl, setCanvasUrl] = useState("");
   const [copyMsg, setCopyMsg] = useState("");
   const [pasteLoading, setPasteLoading] = useState(false);
   const imgRef = useRef();
+  const containerRef = useRef();
+  const [imageAreaHeight, setImageAreaHeight] = useState(320);
+
+  // Dynamic height adjustment to keep body 100vh, no scroll
+  useEffect(() => {
+    function adjustHeight() {
+      if (!containerRef.current) return;
+      const headerH = 62;
+      const footerH = 60;
+      const padding = 30;
+      const actionsH = 50;
+      const fileH = imgFileName ? 23 : 0;
+      const ratioH = 46;
+      const exportH = 44;
+      const msgH = copyMsg ? 22 : 0;
+      const remain = window.innerHeight - (headerH + footerH + padding + actionsH + fileH + ratioH + exportH + msgH);
+      setImageAreaHeight(Math.max(220, remain));
+    }
+    adjustHeight();
+    window.addEventListener("resize", adjustHeight);
+    return () => window.removeEventListener("resize", adjustHeight);
+    // eslint-disable-next-line
+  }, [imgFileName, copyMsg]);
 
   // Handle file upload
   const handleImage = (e) => {
@@ -46,7 +68,7 @@ function App() {
     img.onload = () => setMainColor(getDominantColor(img));
   };
 
-  // Handle paste from clipboard
+  // Paste from clipboard
   const handlePasteClipboard = async () => {
     setPasteLoading(true);
     setCopyMsg("");
@@ -77,29 +99,23 @@ function App() {
   // Render export canvas with watermark
   const renderCanvas = () => {
     if (!imgUrl) return;
-    const { w, h, key } = selectedRatio;
+    const { w, h, key } = RATIOS[selectedIdx];
     const canvas = document.createElement("canvas");
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext("2d");
-
-    // Gradient: brand color + main color (cover) left->right
     const grad = ctx.createLinearGradient(0, 0, w, h);
     grad.addColorStop(0, BRAND_COLOR);
     grad.addColorStop(1, mainColor || "#fff");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
 
-    // Draw book cover (dynamic size per ratio)
     const img = imgRef.current;
     if (img) {
       const aspect = img.naturalWidth / img.naturalHeight;
       let coverW;
-      if (key === "9:16") {
-        coverW = w * 0.5;
-      } else {
-        coverW = w / 3;
-      }
+      if (key === "9:16") coverW = w * 0.5;
+      else coverW = w / 3;
       let coverH = coverW / aspect;
       if (coverH > h * 0.9) {
         coverH = h * 0.9;
@@ -112,8 +128,6 @@ function App() {
       ctx.shadowBlur = 28;
       ctx.drawImage(img, x, y, coverW, coverH);
       ctx.restore();
-
-      // Watermark under the book cover, right-aligned
       ctx.save();
       const fontSize = Math.round(h * 0.045);
       ctx.font = `bold ${fontSize}px Inter, Arial, sans-serif`;
@@ -125,15 +139,13 @@ function App() {
       ctx.fillText("@tinoreading", x + coverW, markY);
       ctx.restore();
     }
-
-    // Convert to JPG
     setCanvasUrl(canvas.toDataURL("image/jpeg", 1.0));
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (imgUrl) renderCanvas();
     // eslint-disable-next-line
-  }, [imgUrl, mainColor, selectedRatio]);
+  }, [imgUrl, mainColor, selectedIdx]);
 
   // Copy JPG to clipboard
   const handleCopy = async () => {
@@ -158,7 +170,7 @@ function App() {
       <header className="header-bar">
         <div className="brand">@tinoreading</div>
         <div className="header-actions">
-          <a className="shop-btn" href="https://tinoreading.club/" target="_blank" rel="noopener noreferrer">
+          <a className="shop-btn" href="https://tinoread.ing/" target="_blank" rel="noopener noreferrer">
             Shop English Books
           </a>
           <a href="https://facebook.com/tinoreading" target="_blank" rel="noopener noreferrer" className="icon-link">
@@ -171,7 +183,7 @@ function App() {
       </header>
 
       {/* MAIN CONTENT */}
-      <div className="center-container">
+      <div className="center-container" ref={containerRef}>
         {/* 1. Upload & Paste */}
         <div className="actions-row">
           <button
@@ -195,12 +207,20 @@ function App() {
             <input id="upload-image" type="file" accept="image/*" onChange={handleImage} style={{ display: "none" }} />
           </label>
         </div>
-        {imgFileName &&
-          <div className="filename-text">{imgFileName}</div>
-        }
+        {/* Filename (fixed height, fade-in) */}
+        <div className="filename-area">
+          {imgFileName && <span className="filename-text">{imgFileName}</span>}
+        </div>
 
         {/* 2. Rendered Image */}
-        <div className="result-panel">
+        <div
+          className="result-panel"
+          style={{
+            minHeight: imageAreaHeight,
+            maxHeight: imageAreaHeight,
+            transition: "max-height 0.32s cubic-bezier(.7,.4,0,1)",
+          }}
+        >
           <div className="export-canvas sharp-corner">
             {canvasUrl ?
               <img
@@ -208,6 +228,7 @@ function App() {
                 alt="result"
                 className="canvas-img"
                 crossOrigin="anonymous"
+                style={{ transition: "opacity 0.32s" }}
               /> :
               <span className="preview-placeholder">
                 Export preview
@@ -224,19 +245,28 @@ function App() {
           </div>
         </div>
 
-        {/* 3. Ratio buttons */}
-        <div className="ratio-btns">
-          {RATIOS.map(ratio => (
+        {/* 3. Ratio compound button */}
+        <div className="ratio-slider">
+          {RATIOS.map((ratio, idx) => (
             <button
               key={ratio.key}
               className={
-                "ratio-btn" + (selectedRatio.key === ratio.key ? " selected" : "")
+                "slider-segment" + (selectedIdx === idx ? " selected" : "")
               }
-              onClick={() => setSelectedRatio(ratio)}
+              onClick={() => setSelectedIdx(idx)}
+              tabIndex={0}
+              style={{ zIndex: selectedIdx === idx ? 2 : 1 }}
             >
               {ratio.label}
             </button>
           ))}
+          <div
+            className="slider-highlight"
+            style={{
+              left: `calc(${selectedIdx * 33.3333}% + 2px)`,
+              transition: "left 0.32s cubic-bezier(.7,.4,0,1)"
+            }}
+          />
         </div>
 
         {/* 4. Export buttons */}
@@ -296,7 +326,6 @@ function App() {
           border: none;
         }
         .icon-link svg { color: #fff !important; }
-
         .center-container {
           display: flex;
           flex-direction: column;
@@ -304,23 +333,22 @@ function App() {
           margin: 0 auto;
           width: 100%;
           max-width: 650px;
-          min-height: calc(100vh - 62px - 42px);
+          min-height: calc(100vh - 62px);
         }
-
         .actions-row {
           display: flex;
           gap: 16px;
-          margin-top: 54px;
-          margin-bottom: 3px;
+          margin-top: 36px;
+          margin-bottom: 0;
           width: 100%;
           justify-content: center;
         }
         .clipboard-btn, .upload-btn {
-          width: 180px;
-          height: 38px;
+          width: 175px;
+          height: 36px;
           border-radius: 13px;
           font-weight: 500;
-          font-size: 15px;
+          font-size: 14px;
           margin: 0;
           display: flex;
           align-items: center;
@@ -333,24 +361,26 @@ function App() {
           transition: background 0.15s;
         }
         .clipboard-btn:disabled { cursor: wait; opacity: 0.72; }
+        .filename-area { height: 23px; display: flex; align-items: center; justify-content: center; }
         .filename-text {
-          font-size: 13.5px;
-          margin-top: 6px;
+          font-size: 13.2px;
           color: #93a3ad;
           font-weight: 500;
           text-align: center;
+          animation: fadeInFile 0.44s;
         }
-
+        @keyframes fadeInFile { from { opacity:0; transform:translateY(-10px);} to {opacity:1; transform:none;} }
         .result-panel {
           width: 100%;
           display: flex;
           flex-direction: column;
           align-items: center;
-          margin-top: 34px;
+          margin-top: 18px;
+          margin-bottom: 0;
         }
         .export-canvas {
-          width: 294px;
-          height: 294px;
+          width: 290px;
+          height: 290px;
           background: #fff;
           margin: 0 auto;
           display: flex;
@@ -358,7 +388,6 @@ function App() {
           justify-content: center;
           position: relative;
           box-shadow: 0 1.5px 12px #54cfe915;
-          /* removed border-radius */
         }
         .sharp-corner { border-radius: 0 !important; }
         .canvas-img {
@@ -374,39 +403,52 @@ function App() {
           font-size: 19px;
           font-weight: 500;
         }
-
-        .ratio-btns {
+        .ratio-slider {
+          position: relative;
           margin-top: 30px;
-          width: 100%;
-          display: flex;
-          justify-content: center;
-          gap: 12px;
-        }
-        .ratio-btn {
-          padding: 7px 23px;
+          width: 260px;
+          height: 42px;
           background: #f2fafd;
-          color: #41b7c2;
+          border-radius: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          box-shadow: 0 2px 10px #c7fcf62d;
+        }
+        .slider-segment {
+          flex: 1 1 33.33%;
+          background: none;
           border: none;
-          border-radius: 13px;
+          outline: none;
+          color: #38b9c2;
           font-weight: 700;
           font-size: 15px;
+          padding: 8px 0;
+          z-index: 2;
           cursor: pointer;
-          outline: none;
-          letter-spacing: 0.2px;
-          transition: background 0.18s, color 0.18s;
+          position: relative;
+          transition: color 0.22s;
         }
-        .ratio-btn.selected {
-          background: ${BRAND_COLOR};
+        .slider-segment.selected {
           color: #fff;
-          box-shadow: 0 1.5px 6px #37bac229;
         }
-
+        .slider-highlight {
+          position: absolute;
+          top: 3px;
+          width: calc(33.33% - 4px);
+          height: 36px;
+          border-radius: 14px;
+          background: ${BRAND_COLOR};
+          z-index: 1;
+          box-shadow: 0 2px 10px #b0f6fe44;
+          transition: left 0.38s cubic-bezier(.77,.22,.31,1.08), background 0.19s;
+        }
         .export-actions {
           margin-top: 22px;
           display: flex;
           justify-content: center;
           width: 100%;
-          gap: 11px;
+          gap: 12px;
         }
         .copy-btn {
           background: ${BRAND_COLOR};
@@ -420,46 +462,48 @@ function App() {
           display: flex;
           align-items: center;
           cursor: pointer;
+          box-shadow: 0 2px 8px #abe9fa22;
+          transition: background 0.2s;
         }
-        .download-link { text-decoration: none; }
+        .download-link { margin-left: 7px; }
         .download-btn {
-          background: #f7fafd;
-          color: ${BRAND_COLOR};
-          border: 1.5px solid #dbeaea;
+          background: #fff;
           border-radius: 12px;
-          padding: 8px 14px;
+          color: ${BRAND_COLOR};
+          border: 1.3px solid #c3e8eb;
+          padding: 8px 11px 7px 11px;
           font-weight: 700;
           font-size: 15px;
           display: flex;
           align-items: center;
           cursor: pointer;
+          box-shadow: 0 2px 8px #abe9fa22;
         }
         .copy-msg {
-          min-height: 22px;
-          font-size: 15px;
-          color: #21b174;
-          font-weight: 500;
           text-align: center;
-          margin-top: 2px;
-        }
-
-        .disclaimer {
-          width: 100%;
           font-size: 13.5px;
-          color: #9bb1b7;
           font-weight: 500;
+          color: #29b8b3;
+          min-height: 22px;
+          margin-top: 6px;
+        }
+        .disclaimer {
+          margin: 34px auto 16px;
+          font-size: 13px;
+          color: #b6bbc1;
           text-align: center;
-          margin-top: 54px;
-          margin-bottom: 22px;
         }
-
         @media (max-width: 700px) {
-          .center-container { max-width: 98vw; }
-          .export-canvas { width: 98vw; max-width: 94vw; height: 98vw; max-height: 98vw; }
+          .center-container {
+            max-width: 99vw;
+            min-width: 0;
+            padding: 0 2vw;
+          }
+          .export-canvas { width: 90vw; height: 90vw; max-width: 340px; max-height: 340px;}
+          .ratio-slider { width: 96vw; max-width: 270px;}
         }
-      `}</style>
+      `}
+      </style>
     </div>
   );
 }
-
-export default App;
