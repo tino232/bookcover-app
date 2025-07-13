@@ -562,7 +562,7 @@ export default function App() {
             max-width: 100vw;
             min-width: 0;
             padding: 0 20px;
-            min-height: auto;
+            min-height: unset;
           }
           .export-canvas { width: ${EXPORT_CANVAS_SIZE_MOBILE}px !important; height: ${EXPORT_CANVAS_SIZE_MOBILE}px !important; max-width: 99vw; max-height: 99vw;}
           .ratio-slider { width: 96vw; max-width: 270px;}
