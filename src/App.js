@@ -554,16 +554,18 @@ export default function App() {
         @media (max-width: 700px) {
           .center-container {
             overflow-y: auto;
+            min-height: unset !important;
+            height: auto !important;
             min-width: 0;
             padding: 0 20px;
           }
           .export-canvas {
-            min-height: 120px !important;
-            min-width: 120px !important;
-            width: 94vw !important;
-            height: 94vw !important;
-            max-width: 340px;
-            max-height: 340px;
+            width: 90vw !important;
+            height: 90vw !important;
+            max-width: 220px !important;
+            max-height: 220px !important;
+            min-width: 80px !important;
+            min-height: 80px !important;
           }
           .ratio-slider { width: 96vw; max-width: 270px;}
           .header-bar { padding: 0 5vw 0 4vw; }
