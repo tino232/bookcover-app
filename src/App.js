@@ -174,8 +174,9 @@ export default function App() {
       ]);
       setCopyMsg("Copied image!");
       setTimeout(() => setCopyMsg(""), 1200);
-    } catch {
+    } catch (err) {
       setCopyMsg("Copy failed.");
+      console.error("Clipboard copy failed:", err);
       setTimeout(() => setCopyMsg(""), 1500);
     }
   };
