@@ -156,7 +156,7 @@ export default function App() {
       ctx.fillText("@tinoreading", x + coverW, markY, watermarkW);
       ctx.restore();
     }
-    setCanvasUrl(canvas.toDataURL("image/jpeg", 1.0));
+    setCanvasUrl(canvas.toDataURL("image/png"));
   };
 
   useEffect(() => {
