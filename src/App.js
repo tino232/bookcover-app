@@ -91,8 +91,8 @@ export default function App() {
     if (img) {
       const aspect = img.naturalWidth / img.naturalHeight;
       let coverW;
-      // For 9:16, book cover is 1.5/3 (50%) of width; for others, 1/3.
-      coverW = (key === "9:16") ? w * 1.5 / 3 : w / 3;
+      // For 9:16, book cover is 1.2/3 (40%) of width; for others, 1/3.
+      coverW = (key === "9:16") ? w * 1.2 / 3 : w / 3;
       let coverH = coverW / aspect;
       if (coverH > h * 0.9) {
         coverH = h * 0.9;
