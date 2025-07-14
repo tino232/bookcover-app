@@ -570,11 +570,13 @@ export default function App() {
           .ratio-slider { width: 96vw; max-width: 270px;}
           .header-bar { padding: 0 5vw 0 4vw; }
         }
-        .shop-btn:hover {
-          background: #e7fcfc;
-          color: #2ca2b2;
-          transform: scale(1.04);
-          transition: background 0.15s, color 0.12s, transform 0.18s;
+        @media (hover: hover) and (pointer: fine) {
+          .shop-btn:hover {
+            background: #e7fcfc;
+            color: #2ca2b2;
+            transform: scale(1.04);
+            transition: background 0.15s, color 0.12s, transform 0.18s;
+          }
         }
         .clipboard-btn:hover,
         .upload-btn:hover {
