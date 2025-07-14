@@ -560,7 +560,14 @@ export default function App() {
             min-width: 0;
             padding: 0 20px;
           }
-          .export-canvas { width: ${EXPORT_CANVAS_SIZE_MOBILE}px !important; height: ${EXPORT_CANVAS_SIZE_MOBILE}px !important; max-width: 99vw; max-height: 99vw;}
+          .export-canvas {
+            min-height: 120px !important;
+            min-width: 120px !important;
+            width: 94vw !important;
+            height: 94vw !important;
+            max-width: 340px;
+            max-height: 340px;
+          }
           .ratio-slider { width: 96vw; max-width: 270px;}
           .header-bar { padding: 0 5vw 0 4vw; }
         }
