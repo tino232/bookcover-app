@@ -102,7 +102,7 @@ export default function App() {
         coverW = coverH * aspect;
       }
       const x = (w - coverW) / 2;
-      const y = (h - coverH) / 2 - 0.04 * h;
+      const y = (h - coverH) / 2;
 
       // 1. Draw shadow under rounded rect (no clip)
       ctx.save();
@@ -283,7 +283,7 @@ export default function App() {
         </div>
         {isIOS && (
         <div className="copy-msg">
-          On iPhone/iPad, tap and hold the image above, then choose "Add to Photos" to save.
+          On iPhone/iPad, tap and hold the image above, then choose "Copy Image" to copy.
         </div>
         )}
         <div className="export-actions" style={isIOS ? { justifyContent: "center" } : {}}>
@@ -556,10 +556,9 @@ export default function App() {
         }
         @media (max-width: 700px) {
           .center-container {
-            min-height: unset !important;
+            overflow-y: auto;
             min-width: 0;
             padding: 0 20px;
-            height: auto !important;
           }
           .export-canvas { width: ${EXPORT_CANVAS_SIZE_MOBILE}px !important; height: ${EXPORT_CANVAS_SIZE_MOBILE}px !important; max-width: 99vw; max-height: 99vw;}
           .ratio-slider { width: 96vw; max-width: 270px;}
