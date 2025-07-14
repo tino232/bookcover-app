@@ -545,7 +545,7 @@ export default function App() {
         }
         @media (max-width: 700px) {
           .center-container {
-            min-height: calc(100dvh - 62px) !important;
+            min-height: unset !important;
             min-width: 0;
             padding: 0 20px;
             height: auto !important;
