@@ -36,27 +36,6 @@ export default function App() {
   const [copyMsg, setCopyMsg] = useState("");
   const [pasteLoading, setPasteLoading] = useState(false);
   const imgRef = useRef();
-  const [canvasBoxHeight, setCanvasBoxHeight] = useState(EXPORT_CANVAS_SIZE);
-
-  // Adjust height for viewport, so all fits, with larger export canvas
-  useEffect(() => {
-    function adjustHeight() {
-      const headerH = 62;
-      const actionsH = 48;
-      const ratioH = 54;
-      const exportH = 54;
-      const msgH = copyMsg ? 22 : 0;
-      const disclaimerH = 34;
-      const gapSum = 24 + 16 + 20; // less margin/padding between blocks
-      const fileH = imgFileName && imgFileName !== "clipboard-image.png" ? 23 : 0;
-      let max = window.innerHeight - headerH - actionsH - fileH - ratioH - exportH - msgH - disclaimerH - gapSum;
-      setCanvasBoxHeight(Math.max(180, Math.min(EXPORT_CANVAS_SIZE, max)));
-    }
-    adjustHeight();
-    window.addEventListener("resize", adjustHeight);
-    return () => window.removeEventListener("resize", adjustHeight);
-    // eslint-disable-next-line
-  }, [imgFileName, copyMsg]);
 
   const handleImage = (e) => {
     setCopyMsg("");
@@ -251,45 +230,31 @@ export default function App() {
             <span className="filename-text">{imgFileName}</span>
           )}
         </div>
-        <div
-          className="result-panel"
-          style={{
-            minHeight: canvasBoxHeight,
-            maxHeight: canvasBoxHeight,
-            transition: "max-height 0.32s cubic-bezier(.7,.4,0,1)",
-          }}
-        >
-          <div
-            className="export-canvas sharp-corner"
-            style={{
-              width: canvasBoxHeight,
-              height: canvasBoxHeight,
-              maxWidth: "100vw",
-              maxHeight: "100vw"
-            }}
-          >
-            {canvasUrl ?
-              <img
-                src={canvasUrl}
-                alt="result"
-                className="canvas-img"
-                crossOrigin="anonymous"
-                style={{ transition: "opacity 0.32s" }}
-              /> :
-              <span className="preview-placeholder">
-                Export preview
-              </span>
-            }
+      <div className="result-panel">
+        <div className="export-canvas sharp-corner">
+          {canvasUrl ?
             <img
-              ref={imgRef}
-              src={imgUrl}
-              alt=""
-              className="hidden-img"
+              src={canvasUrl}
+              alt="result"
+              className="canvas-img"
               crossOrigin="anonymous"
-              onLoad={renderCanvas}
-            />
-          </div>
+              style={{ transition: "opacity 0.32s" }}
+            /> :
+            <span className="preview-placeholder">
+              Export preview
+            </span>
+          }
+          <img
+            ref={imgRef}
+            src={imgUrl}
+            alt=""
+            className="hidden-img"
+            crossOrigin="anonymous"
+            onLoad={renderCanvas}
+          />
         </div>
+      </div>
+
         <div className="ratio-slider" style={{ width: sliderWidth, marginTop: 16 }}>
           {RATIOS.map((ratio, idx) => (
             <button
@@ -440,16 +405,21 @@ export default function App() {
         }
         @keyframes fadeInFile { from { opacity:0; transform:translateY(-10px);} to {opacity:1; transform:none;} }
         .result-panel {
-          width: 100%;
+          flex: 1 1 auto;
           display: flex;
-          flex-direction: column;
           align-items: center;
-          margin-top: 10px;
+          justify-content: center;
+          width: 100%;
+          min-height: 150px;
+          margin-top: 12px;
           margin-bottom: 0;
         }
         .export-canvas {
+          width: 90%;
+          max-width: 350px;
+          aspect-ratio: 1 / 1; /* or use height: auto */
+          height: auto;
           background: #fff;
-          margin: 0 auto;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -556,7 +526,8 @@ export default function App() {
           margin-top: 6px;
         }
         .disclaimer {
-          margin: 28px auto 16px;
+          margin-top: auto;
+          margin-bottom: 18px;
           font-size: 13px;
           color: #b6bbc1;
           text-align: center;
