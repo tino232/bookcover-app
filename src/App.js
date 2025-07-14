@@ -10,7 +10,6 @@ const RATIOS = [
 ];
 
 // --- Constants for easy tweak ---
-const EXPORT_CANVAS_SIZE = 340; // px, desktop default (was 290)
 const EXPORT_CANVAS_SIZE_MOBILE = 300; // px, mobile max
 
 function getDominantColor(img) {
