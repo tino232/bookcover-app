@@ -9,9 +9,6 @@ const RATIOS = [
   { key: "9:16", label: "9:16", w: 1152, h: 2048 },
 ];
 
-// --- Constants for easy tweak ---
-const EXPORT_CANVAS_SIZE_MOBILE = 300; // px, mobile max
-
 function getDominantColor(img) {
   const canvas = document.createElement("canvas");
   canvas.width = img.width;
