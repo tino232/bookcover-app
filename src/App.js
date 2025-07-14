@@ -562,8 +562,8 @@ export default function App() {
           .export-canvas {
             width: 90vw !important;
             height: 90vw !important;
-            max-width: 220px !important;
-            max-height: 220px !important;
+            max-width: 250px !important;
+            max-height: 250px !important;
             min-width: 80px !important;
             min-height: 80px !important;
           }
