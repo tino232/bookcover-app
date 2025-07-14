@@ -554,6 +554,26 @@ export default function App() {
           .ratio-slider { width: 96vw; max-width: 270px;}
           .header-bar { padding: 0 5vw 0 4vw; }
         }
+        .shop-btn:hover {
+          background: #e7fcfc;
+          color: #2ca2b2;
+          transform: scale(1.04);
+          transition: background 0.15s, color 0.12s, transform 0.18s;
+        }
+        .clipboard-btn:hover,
+        .upload-btn:hover {
+          background: #e8f7fa;
+          color: #18a0a9;
+          border-color: #6fd4e7;
+          box-shadow: 0 3px 14px #38bac222;
+          transition: background 0.14s, color 0.11s, box-shadow 0.16s;
+        }
+        .copy-btn:hover {
+        background: #18b2c4;
+        color: #fff;
+        transform: scale(1.05);
+        transition: background 0.15s, color 0.13s, transform 0.18s;
+        }
       `}</style>
     </div>
   );
