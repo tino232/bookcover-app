@@ -552,9 +552,9 @@ export default function App() {
         font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
         }
         @media (max-width: 700px) {
-          .disclaimer {
-            margin-top: 16px !important;  /* or whatever looks good */
-            margin-bottom: 12px !important;
+          html, body {
+            min-height: unset !important;
+            height: auto !important;
           }
           .center-container {
             overflow-y: auto;
