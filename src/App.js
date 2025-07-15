@@ -162,6 +162,16 @@ export default function App() {
     // eslint-disable-next-line
   }, [imgUrl, mainColor, selectedIdx]);
 
+  useEffect(() => {
+  function setVh() {
+    // 1vh = 1% of window.innerHeight (visual viewport)
+    document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
+  }
+  setVh();
+  window.addEventListener('resize', setVh);
+  return () => window.removeEventListener('resize', setVh);
+  }, []);
+
   const handleCopy = async () => {
     if (!canvasUrl) return;
     try {
@@ -552,19 +562,10 @@ export default function App() {
         font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
         }
         @media (max-width: 700px) {
-          html, body {
-            overflow-y: hidden !important;
-            min-height: 0 !important;
-            height: auto !important;
-          }
-          #root {
-            min-height: 0 !important;
-            height: auto !important;
-            }
           .center-container {
             overflow-y: auto;
-            min-height: 0 !important;
-            height: auto !important;
+            min-height: calc(var(--vh, 1vh) * 100) !important;
+            height: calc(var(--vh, 1vh) * 100) !important;
             min-width: 0;
             padding: 0 20px;
           }
