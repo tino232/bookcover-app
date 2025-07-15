@@ -554,8 +554,14 @@ export default function App() {
         @media (max-width: 700px) {
           html, body {
             overflow-y: hidden !important;
+            min-height: 0 !important;
+            height: auto !important;
           }
-          html, body, #root, .center-container {
+          #root {
+            min-height: 0 !important;
+            height: auto !important;
+            }
+          .center-container {
             overflow-y: auto;
             min-height: 0 !important;
             height: auto !important;
