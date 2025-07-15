@@ -553,12 +553,11 @@ export default function App() {
         }
         @media (max-width: 700px) {
           html, body {
-            min-height: unset !important;
-            height: auto !important;
+            overflow-y: hidden !important;
           }
-          .center-container {
+          html, body, #root, .center-container {
             overflow-y: auto;
-            min-height: unset !important;
+            min-height: 0 !important;
             height: auto !important;
             min-width: 0;
             padding: 0 20px;
