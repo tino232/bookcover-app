@@ -564,8 +564,8 @@ export default function App() {
         @media (max-width: 700px) {
           .center-container {
             overflow-y: auto;
-            min-height: calc(var(--vh, 1vh) * 100) !important;
-            height: calc(var(--vh, 1vh) * 100) !important;
+            min-height: 0 !important;
+            height: auto !important;
             min-width: 0;
             padding: 0 20px;
           }
