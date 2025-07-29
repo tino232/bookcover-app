@@ -9,6 +9,13 @@ const RATIOS = [
   { key: "9:16", label: "9:16", w: 1152, h: 2048 },
 ];
 
+function extractRGB(rgbStr) {
+  // rgbStr là chuỗi kiểu 'rgb(r, g, b)'
+  const result = rgbStr.match(/\d+/g);
+  if (!result || result.length < 3) return "55,186,194"; // fallback thành màu brand
+  return `${result[0]},${result[1]},${result[2]}`;
+}
+
 function getWarmColor(img) {
   const canvas = document.createElement("canvas");
   canvas.width = img.width;
@@ -90,10 +97,15 @@ export default function App() {
     canvas.height = h;
     const ctx = canvas.getContext("2d");
     const grad = ctx.createLinearGradient(0, 0, w, h);
-    grad.addColorStop(0, BRAND_COLOR);
-    grad.addColorStop(0.3, "rgba(55, 186, 194, 0.7)");  // điểm chuyển màu mượt
-    grad.addColorStop(0.6, "rgba(55, 186, 194, 0.4)");  // điểm chuyển màu mượt hơn
-    grad.addColorStop(1, mainColor || "#fff");
+
+    // 6 stops, chia đều từ 0 đến 1 (0, 0.2, 0.4, 0.6, 0.8, 1)
+    grad.addColorStop(0.00, BRAND_COLOR);
+    grad.addColorStop(0.20, "rgba(55, 186, 194, 0.8)");
+    grad.addColorStop(0.40, "rgba(55, 186, 194, 0.5)");
+    grad.addColorStop(0.60, `rgba(${extractRGB(mainColor)}, 0.5)`);
+    grad.addColorStop(0.80, `rgba(${extractRGB(mainColor)}, 0.8)`);
+    grad.addColorStop(1.00, mainColor || "#fff");
+
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
 
