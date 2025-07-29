@@ -9,7 +9,7 @@ const RATIOS = [
   { key: "9:16", label: "9:16", w: 1152, h: 2048 },
 ];
 
-function getDominantColor(img) {
+function getWarmColor(img) {
   const canvas = document.createElement("canvas");
   canvas.width = img.width;
   canvas.height = img.height;
@@ -18,8 +18,16 @@ function getDominantColor(img) {
   const { data } = ctx.getImageData(0, 0, img.width, img.height);
   let r = 0, g = 0, b = 0, count = 0;
   for (let i = 0; i < data.length; i += 4) {
-    r += data[i]; g += data[i + 1]; b += data[i + 2]; count++;
+    const red = data[i];
+    const green = data[i + 1];
+    const blue = data[i + 2];
+    // Chỉ lấy pixel màu ấm (đỏ > xanh lá và xanh dương)
+    if (red > green && red > blue) {
+      r += red; g += green; b += blue;
+      count++;
+    }
   }
+  if (count === 0) return BRAND_COLOR; // fallback nếu không có màu nóng
   return `rgb(${Math.round(r / count)},${Math.round(g / count)},${Math.round(b / count)})`;
 }
 
@@ -43,7 +51,7 @@ export default function App() {
     setImgUrl(url);
     const img = new window.Image();
     img.src = url;
-    img.onload = () => setMainColor(getDominantColor(img));
+    img.onload = () => setMainColor(getWarmColor(img));
   };
 
   const handlePasteClipboard = async () => {
@@ -60,7 +68,7 @@ export default function App() {
             setImgFileName(""); // <--- Don't show clipboard-image.png
             const img = new window.Image();
             img.src = url;
-            img.onload = () => setMainColor(getDominantColor(img));
+            img.onload = () => setMainColor(getWarmColor(img));
             setPasteLoading(false);
             return;
           }
@@ -81,8 +89,9 @@ export default function App() {
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext("2d");
-    const grad = ctx.createLinearGradient(0, 0, w, h);
+    const grad = ctx.createLinearGradient(0, 0, w, 0); // gradient ngang
     grad.addColorStop(0, BRAND_COLOR);
+    grad.addColorStop(0.6, "rgba(55, 186, 194, 0.7)"); // màu brand pha trong suốt
     grad.addColorStop(1, mainColor || "#fff");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
