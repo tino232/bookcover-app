@@ -89,9 +89,10 @@ export default function App() {
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext("2d");
-    const grad = ctx.createLinearGradient(0, 0, w, 0); // gradient ngang
+    const grad = ctx.createLinearGradient(0, 0, w, h);
     grad.addColorStop(0, BRAND_COLOR);
-    grad.addColorStop(0.6, "rgba(55, 186, 194, 0.7)"); // màu brand pha trong suốt
+    grad.addColorStop(0.3, "rgba(55, 186, 194, 0.7)");  // điểm chuyển màu mượt
+    grad.addColorStop(0.6, "rgba(55, 186, 194, 0.4)");  // điểm chuyển màu mượt hơn
     grad.addColorStop(1, mainColor || "#fff");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
